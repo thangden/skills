@@ -1,5 +1,5 @@
 ---
-description: Khởi tạo kiến trúc 5-Layers Agentic OS cho bất kỳ workspace nào — kể cả project FE/BE đang có sẵn. Tự động scan context, phỏng vấn thông minh (chỉ hỏi những gì chưa biết), sinh đủ 5 layers, tạo agents + skill + demo-prompts.md để chạy ngay. Dùng cho workshop, onboarding, hoặc setup workspace mới — cho cả tech và non-tech.
+description: "Dùng skill này bất cứ khi nào user muốn setup workspace AI cho team — kể cả các cách nói như: 'setup cho team mình', 'setup workspace để Claude giúp team', 'cấu hình CLAUDE.md + agents + memory + hooks', 'onboarding workspace mới cho team', 'bootstrap AI layer', 'setup hệ điều hành AI', 'init .claude/ từ đầu', 'setup 5 layers cho team', 'demo AOS setup', 'repo chưa có gì setup giùm mình', hoặc bất kỳ ý định nào muốn Claude hoạt động như thành viên thật sự của team. Tạo đầy đủ 5 layers (CLAUDE.md, .claude/memory/, .claude/rules/, .claude/hooks/, .claude/agents/) cho mọi team: BD, MKT, OPS, Tech FE/BE, Product — qua interview thông minh tự scan context."
 ---
 
 # Skill: AOS — Agentic OS Setup
