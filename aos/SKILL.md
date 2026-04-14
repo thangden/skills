@@ -4,12 +4,12 @@ description: >-
   Use this skill whenever the user wants to set up an AI workspace for their
   team — including phrases like: set up workspace for my team, configure Claude
   for our team, set up CLAUDE.md + agents + memory + hooks, onboard a new
-  workspace, bootstrap AI layer, initialize AI operating system, init .claude/
-  from scratch, set up 5 layers for the team, demo AOS setup, this repo has
-  nothing please set it up, or any intent to make Claude act as a real team
-  member. Creates all 5 layers (CLAUDE.md, .claude/memory/, .claude/rules/,
-  .claude/hooks/, .claude/agents/) for any team type — BD, MKT, OPS, Tech
-  FE/BE, Product — via a smart interview that scans context first.
+  workspace, bootstrap the AI layer, initialize an AI operating system, init
+  .claude/ from scratch, set up 5 layers for the team, or any intent to make
+  Claude act as a real team member. Creates all 5 layers (CLAUDE.md,
+  .claude/memory/, .claude/rules/, .claude/hooks/, .claude/agents/) for any
+  team type — Sales, Marketing, Operations, Engineering, Product — via a smart
+  interview that scans workspace context first.
 ---
 
 # Skill: AOS — Agentic OS Setup
@@ -34,7 +34,7 @@ Read the workspace in priority order (stop when context is sufficient, max 5 fil
 
 After scanning, show a summary for the user to confirm:
 
-```
+```text
 I've scanned the workspace and inferred:
 - Team type: [Tech FE / Tech BE / Non-tech / Unknown]
 - Tech stack: [Next.js 15 + TypeScript / Python FastAPI / N/A]
@@ -42,13 +42,13 @@ I've scanned the workspace and inferred:
 - Existing AOS config: [CLAUDE.md present / Nothing found]
 
 I'll skip questions about information that's already clear.
-Anything to correct? (yes = continue / or tell me what to fix)
+Anything to correct before I proceed?
 ```
 
 **Inference → skipped questions mapping:**
 
 | Inferred from scan | Skip question |
-|---|---|
+| --- | --- |
 | README clearly describes team/role | [1] Team & Role |
 | `package.json` / lockfile with framework | Tech stack portion of [6] |
 | Folders like `proposals/`, `content/`, `reports/` exist | [3] Folder Structure |
@@ -67,7 +67,7 @@ If nothing can be inferred (empty repo with no README) → skip scan, go straigh
 1. Check whether `.claude/` exists
 2. If it **does** → list what's already there:
 
-```
+```text
 I see this workspace already has:
 - .claude/agents/: [list of files]
 - .claude/skills/: [list of files]
@@ -78,9 +78,9 @@ What would you like to do?
 (B) Fill in the gaps only — keep existing files as-is
 ```
 
-3. If user picks **(B)** → show a **Dry-run Preview** before creating any file:
+1. If user picks **(B)** → show a **Dry-run Preview** before creating any file:
 
-```
+```text
 Dry-run Preview — files to be created or skipped:
 ✅ Create: CLAUDE.md (not found)
 ✅ Create: .claude/memory/ (not found)
@@ -90,7 +90,7 @@ Dry-run Preview — files to be created or skipped:
 Confirm? (yes / no)
 ```
 
-4. If user picks **(A)** or `.claude/` doesn't exist → continue to Phase 1 normally.
+1. If user picks **(A)** or `.claude/` doesn't exist → continue to Phase 1 normally.
 
 **STOP-LOSS for ambiguous workspaces:** If multiple CLAUDE.md files from different projects are detected → ask the user to confirm this is the correct workspace before continuing.
 
@@ -129,7 +129,7 @@ Confirm? (yes / no)
 
 **[6] Tone & Domain Knowledge**
 > "What's the team's communication style: professional, casual, data-driven, creative...?
-> And what domain-specific knowledge does the agent need?" *(ICP, pricing tiers, objection handling, technical details...)*
+> And what domain-specific knowledge does the agent need?" *(Ideal Customer Profile (ICP), pricing tiers, objection handling, technical details...)*
 
 ---
 
@@ -144,7 +144,7 @@ Once enough information is collected — **ask nothing more** — create files i
 **`CLAUDE.md`** — Constitution, must stay under 200 lines:
 
 - Team description + primary mission
-- ICP / who the team serves
+- Ideal Customer Profile (ICP) / who the team serves
 - 2–3 golden rules (from red lines in Phase 1)
 - Default output format (markdown with clear headers)
 - Standard tone
@@ -171,7 +171,7 @@ Create folder **`.claude/memory/`** with 3 core components:
 
 ```markdown
 # Active Context & Trajectory
-Main Jira / Backlog source. Edit items in this list:
+Primary task tracker / backlog (Jira, Linear, Notion, etc.). Edit items in this list:
 
 ## In Progress
 - [ ] Customize agent persona with real team domain knowledge
@@ -195,29 +195,35 @@ Main Jira / Backlog source. Edit items in this list:
 Create **3 files** in `.claude/rules/`, names are dynamic based on input:
 
 **File 1: `brand-voice.md`** — No `paths` (loaded globally at all times):
+
 ```yaml
 ---
 description: [Team] brand voice and communication standards — loaded globally
 ---
 ```
+
 Content: tone guide, words to avoid, team writing standards.
 
 **File 2: `[primary-folder]-rules.md`** — Name = primary output folder (e.g., `proposal-rules.md`):
+
 ```yaml
 ---
 description: Rules for [primary task] — only loaded when working with [primary-folder]/
 paths: ["[primary-folder]/**"]
 ---
 ```
+
 Content: required structure for primary output, pre-finalization checklist.
 
 **File 3: `[secondary-folder]-rules.md`** — Name = secondary folder (e.g., `outreach-rules.md`):
+
 ```yaml
 ---
 description: Rules for [secondary task] — only loaded when working with [secondary-folder]/
 paths: ["[secondary-folder]/**"]
 ---
 ```
+
 Content: rules specific to the secondary task.
 
 ---
@@ -225,6 +231,7 @@ Content: rules specific to the secondary task.
 ### Layer 4 — Hooks
 
 **`.claude/settings.json`**:
+
 ```json
 {
   "hooks": {
@@ -247,6 +254,7 @@ Content: rules specific to the secondary task.
 Two variants depending on team type inferred in Phase 0A:
 
 **Variant A — Non-tech teams (BD, MKT, OPS):** file-based checks, no git commands:
+
 ```bash
 #!/bin/bash
 # Stop hook — Quality Gate & Memory Guard
@@ -290,6 +298,7 @@ exit 0
 ```
 
 **Variant B — Tech teams (FE, BE, Full-stack):** adds git-aware checks, uses `find` instead of glob for portability:
+
 ```bash
 #!/bin/bash
 # Stop hook — Quality Gate & Memory Guard (Tech variant)
@@ -346,6 +355,7 @@ exit 0
 ### Layer 5 — Agents + Skill
 
 **Agent 1: `.claude/agents/[team]-senior.md`** — Name is dynamic based on team:
+
 ```yaml
 ---
 name: [team]-senior
@@ -367,6 +377,7 @@ tools: []
 ```
 
 **Agent 2: `.claude/agents/research-analyst.md`** — Fixed, never changes:
+
 ```yaml
 ---
 name: research-analyst
@@ -378,8 +389,8 @@ tools: [Read, Grep, Glob]
 # Research Analyst Agent
 
 ## Persona
-Systematic researcher. Knows how to surface information, always cites sources, never hallucinates.
-When uncertain → explicitly writes "Not yet verified" instead of guessing.
+Systematic researcher. Prioritizes verified sources; explicitly flags uncertainty rather than filling gaps with inference.
+When uncertain → writes "Not yet verified" rather than guessing.
 
 ## Approach
 - Read multiple sources before drawing conclusions
@@ -388,11 +399,13 @@ When uncertain → explicitly writes "Not yet verified" instead of guessing.
 ```
 
 **Skill: `.claude/skills/[anchor-workflow-name].md`** — Name = workflow name from anchor use case:
+
 ```yaml
 ---
 description: [Workflow description — what input → what output]
 ---
 ```
+
 Content:
 
 - **When to use:** trigger conditions
@@ -412,7 +425,7 @@ Content:
 
 Required layout:
 
-1. **Congratulations** — "The AI OS for [X] team is ready"
+1. **Setup complete** — "Your AI OS for [X] team is ready"
 2. **5-Layer Anatomy** in plain language (no code jargon):
    - Kernel = Constitution, always loaded
    - Memory = Long-term memory, never forgotten (`system-knowledge`, `active-context`)
@@ -445,7 +458,7 @@ Required layout:
 @[team]-senior [sample execution task relevant to the team]
 
 ## Update memory after task
-NOTE: Please check off the task in `.claude/memory/active-context.md` and write a short log in `.claude/memory/episodic/[today].md` to satisfy the Memory Guard Hook before marking the task complete.
+Important: Before closing this session, check off the completed task in `.claude/memory/active-context.md` and write a short log in `.claude/memory/episodic/[today].md` to satisfy the Memory Guard hook.
 ```
 
 ---
