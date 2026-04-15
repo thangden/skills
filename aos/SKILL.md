@@ -148,6 +148,8 @@ Once enough information is collected — **ask nothing more** — create files i
 - 2–3 golden rules (from red lines in Phase 1)
 - Default output format (markdown with clear headers)
 - Standard tone
+- Skill Routing: explicit link to `.claude/skills/` to prioritize project-level skills over global ones
+- Agent Routing: explicit link to `.claude/agents/` to prioritize project-level personas over global ones
 
 **`SOUL.md`** — Runtime policies:
 
