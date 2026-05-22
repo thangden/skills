@@ -185,14 +185,24 @@ Next:
 1. Locate the most recent `.claude/_v1-backup-*` folder. If multiple exist, list them and ask user to pick.
 2. Warn: any changes to `.claude/` made after the backup will be lost. List specific files modified after backup mtime if practical.
 3. Confirm with user (`yes` required).
-4. Execute:
+4. Execute — **move-then-restore** (the backup lives inside `.claude/`, so `rm -rf .claude/*` would delete the backup before we can copy it):
+
    ```bash
-   # Save anything we want to preserve first (e.g., user explicitly asked)
-   rm -rf .claude/*  # but keep .claude itself
-   cp -r .claude/_v1-backup-YYYYMMDD/. .claude/
-   rm .claude/aos-version  # ensure v1 state
+   # 4a. Move backup OUT of .claude/ to a sibling temp location
+   mv .claude/_v1-backup-YYYYMMDD /tmp/aos-rollback-source-$$
+
+   # 4b. Remove the current .claude/ entirely (v2 state)
+   rm -rf .claude
+
+   # 4c. Restore from the moved backup
+   mv /tmp/aos-rollback-source-$$ .claude
    ```
-5. Log to a fresh episodic entry (v1-style, since we're back in v1): note the rollback.
+
+   The backup directory now becomes the new `.claude/`. The `aos-version` marker is naturally absent because the backup snapshot pre-dated it.
+
+5. Log to a fresh episodic entry (v1-style, since we're back in v1): note the rollback. If the v1 episodic location is `.claude/memory/episodic/YYYY-MM-DD.md`, append there; otherwise create.
+
+**Why move-then-restore instead of `rm -rf .claude/* && cp`.** The backup folder is a child of `.claude/`. A naive `rm -rf .claude/*` would delete the backup before the `cp` could read from it — silent data loss. Moving the backup to a sibling temp path first decouples the source from the destination.
 
 ## Failure handling
 
