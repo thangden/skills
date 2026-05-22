@@ -48,10 +48,10 @@ if [ -d "$MEMORY_DIR" ]; then
       MEMORY.md) continue ;;
       _archive*) continue ;;
     esac
-    head -n 12 "$f" | grep -q "^name:" || { echo "[memory-stop] SCHEMA: $f missing 'name'" >&2; ERRORS=1; }
-    head -n 12 "$f" | grep -q "^description:" || { echo "[memory-stop] SCHEMA: $f missing 'description'" >&2; ERRORS=1; }
-    head -n 12 "$f" | grep -q "^type:" || { echo "[memory-stop] SCHEMA: $f missing 'type'" >&2; ERRORS=1; }
-    head -n 12 "$f" | grep -q "^scope:" || { echo "[memory-stop] SCHEMA: $f missing 'scope'" >&2; ERRORS=1; }
+    head -n 12 "$f" | command grep -q "^name:" || { echo "[memory-stop] SCHEMA: $f missing 'name'" >&2; ERRORS=1; }
+    head -n 12 "$f" | command grep -q "^description:" || { echo "[memory-stop] SCHEMA: $f missing 'description'" >&2; ERRORS=1; }
+    head -n 12 "$f" | command grep -q "^type:" || { echo "[memory-stop] SCHEMA: $f missing 'type'" >&2; ERRORS=1; }
+    head -n 12 "$f" | command grep -q "^scope:" || { echo "[memory-stop] SCHEMA: $f missing 'scope'" >&2; ERRORS=1; }
   done
 fi
 

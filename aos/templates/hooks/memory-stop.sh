@@ -51,21 +51,21 @@ if [ -d "$MEMORY_DIR" ]; then
       _archive*) continue ;;
     esac
     # Check the first 12 lines contain frontmatter with required fields
-    head -n 12 "$f" | grep -q "^name:" || { echo "[memory-stop] SCHEMA: $f missing 'name'" >&2; ERRORS=1; }
-    head -n 12 "$f" | grep -q "^description:" || { echo "[memory-stop] SCHEMA: $f missing 'description'" >&2; ERRORS=1; }
-    head -n 12 "$f" | grep -q "^type:" || { echo "[memory-stop] SCHEMA: $f missing 'type'" >&2; ERRORS=1; }
-    head -n 12 "$f" | grep -q "^scope:" || { echo "[memory-stop] SCHEMA: $f missing 'scope'" >&2; ERRORS=1; }
+    head -n 12 "$f" | command grep -q "^name:" || { echo "[memory-stop] SCHEMA: $f missing 'name'" >&2; ERRORS=1; }
+    head -n 12 "$f" | command grep -q "^description:" || { echo "[memory-stop] SCHEMA: $f missing 'description'" >&2; ERRORS=1; }
+    head -n 12 "$f" | command grep -q "^type:" || { echo "[memory-stop] SCHEMA: $f missing 'type'" >&2; ERRORS=1; }
+    head -n 12 "$f" | command grep -q "^scope:" || { echo "[memory-stop] SCHEMA: $f missing 'scope'" >&2; ERRORS=1; }
   done
 fi
 
 # ---- 4. Tech variant — git-aware secret + .env guards (only if git repo) ----
 if git rev-parse --git-dir > /dev/null 2>&1; then
-  if git diff --cached 2>/dev/null | grep '^\+' | grep -v '^\+\+\+' \
-     | grep -iE "(password|secret|api[_-]?key|token)\s*=\s*['\"][^'\"]{8,}" > /dev/null 2>&1; then
+  if git diff --cached 2>/dev/null | command grep '^+' | command grep -v '^+++' \
+     | command grep -iE "(password|secret|api[_-]?key|token)[[:space:]]*=[[:space:]]*['\"][^'\"]{8,}" > /dev/null 2>&1; then
     echo "[memory-stop] BLOCKED: Hardcoded secret detected in staged changes" >&2
     ERRORS=1
   fi
-  if git diff --cached --name-only 2>/dev/null | grep -E '(^|/)\.env$' > /dev/null 2>&1; then
+  if git diff --cached --name-only 2>/dev/null | command grep -E '(^|/)\.env$' > /dev/null 2>&1; then
     echo "[memory-stop] BLOCKED: .env file staged — do not commit credentials" >&2
     ERRORS=1
   fi
