@@ -1,6 +1,6 @@
 # 0003 — Curator Trigger Model and Confidence-Driven Routing
 
-**Context.** aos v1 Curator was invoked only via `@memory-curator` or `/curate` and always asked the user to classify before saving. 84% of Aha workshop participants are Non-Tech and do not reliably remember skill names; explicit-only triggering produced near-zero usage in v1. Meanwhile, Anthropic's own auto-memory pattern has Claude proactively decide what to save without a user command. For aos v2 we had to decide how Curator gets invoked and how aggressive its routing should be.
+**Context.** aos v1 Curator was invoked only via `@memory-curator` or `/curate` and always asked the user to classify before saving. Field tests showed the majority of Non-Tech users do not reliably remember skill names; explicit-only triggering produced near-zero usage in v1. Meanwhile, Anthropic's own auto-memory pattern has Claude proactively decide what to save without a user command. For aos v2 we had to decide how Curator gets invoked and how aggressive its routing should be.
 
 **Decision.** Curator uses a hybrid trigger and confidence-driven routing:
 
@@ -19,7 +19,7 @@
 
 **Consequences.**
 
-- Curator SKILL.md description must list trigger cues explicitly so Claude reliably invokes it. Tested triggers go in `aos/evals/curator-triggers.md` (created when first eval is written).
+- Curator SKILL.md description must list trigger cues explicitly so Claude reliably invokes it. Tested triggers go in `evals/curator-triggers.md` (created when first eval is written).
 - The `0.8` confidence threshold is a calibration knob, not an architectural commitment. Expect to retune after 2-4 weeks of real use. No ADR needed for retuning.
 - Curator must emit a structured announcement (`saved: <path>` + `scope:` + `type:` + `confidence:`) so downstream tools (Janitor, hook, future Promoter) can parse and audit.
 - Implicit triggering risks false-positive saves during casual conversation. Mitigation: confidence gating + episodic logging + one-word rollback. If false-positive rate exceeds tolerance in calibration, fall back to explicit-only as a per-Workspace setting (`CLAUDE.md` flag), not a re-architecture.

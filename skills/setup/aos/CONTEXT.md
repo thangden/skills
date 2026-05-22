@@ -11,7 +11,7 @@ The 5-layer reference design — Kernel (CLAUDE.md + SOUL.md), Memory, Rules, Ho
 _Avoid_: "the OS", "agentic system"
 
 **aos skill**:
-The installable skill at `aos/SKILL.md` that interviews the user and generates an Agentic OS Workspace.
+The installable skill at `SKILL.md` that interviews the user and generates an Agentic OS Workspace.
 _Avoid_: "the aos", "agentic os tool"
 
 **Workspace**:

@@ -3,9 +3,12 @@ PUSH_WHEN_READY.sh
 # macOS
 .DS_Store
 
+# Dogfood workspace — local only, not for public repo
+.claude/
+
 # aos v2 runtime artifacts — generated, not source
-.claude/.curator-active
-.claude/.janitor-applied
-.claude/memory/_archive/
-.claude/janitor-report-*.md
-.claude/_v1-backup-*/
+**/.curator-active
+**/.janitor-applied
+**/_archive/
+janitor-report-*.md
+**/_v1-backup-*/

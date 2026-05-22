@@ -1,6 +1,6 @@
 # Migration Playbook: aos v1 → v2
 
-Authority: [aos/docs/adr/0007-migration-v1-to-v2.md](../docs/adr/0007-migration-v1-to-v2.md)
+Authority: [docs/adr/0007-migration-v1-to-v2.md](../docs/adr/0007-migration-v1-to-v2.md)
 
 This document is the step-by-step playbook Claude follows when invoked via `/aos --upgrade`. It is **not** an automated bash script — each step is a deliberate operation with user-visible output.
 
@@ -30,7 +30,7 @@ Memory transformation:
 
 New files:
   .claude/memory/MEMORY.md (index)
-  .claude/skills/curator.md  (from aos/templates/)
+  .claude/skills/curator.md  (from templates/)
   .claude/skills/janitor.md
   .claude/hooks/memory-stop.sh
   .claude/hooks/janitor-surface.sh
@@ -104,12 +104,12 @@ For each file in `.claude/memory/episodic/` (matching pattern `YYYY-MM-DD.md`):
 
 ### Step 5 — Generate `MEMORY.md` index
 
-Enumerate all Entries in `.claude/memory/*.md` (excluding `MEMORY.md`, `_archive/`, `_v1-backup-*`). Group by `type` field. Write `.claude/memory/MEMORY.md` per the schema in [aos/templates/](../templates/) — one bullet per Entry with `[name](file.md) — first line of description`.
+Enumerate all Entries in `.claude/memory/*.md` (excluding `MEMORY.md`, `_archive/`, `_v1-backup-*`). Group by `type` field. Write `.claude/memory/MEMORY.md` per the schema in [templates/](../templates/) — one bullet per Entry with `[name](file.md) — first line of description`.
 
 ### Step 6 — Install Curator and Janitor
 
-Copy `aos/templates/skills/curator.md` → `.claude/skills/curator.md`.
-Copy `aos/templates/skills/janitor.md` → `.claude/skills/janitor.md`.
+Copy `templates/skills/curator.md` → `.claude/skills/curator.md`.
+Copy `templates/skills/janitor.md` → `.claude/skills/janitor.md`.
 
 If `.claude/skills/memory-curator.md` or `.claude/skills/memory-janitor.md` exist (v1 names), move to `.claude/skills/_v1-deprecated/` (create folder if absent). Do not delete — the user may have customized.
 
@@ -117,16 +117,16 @@ If `.claude/skills/memory-curator.md` or `.claude/skills/memory-janitor.md` exis
 
 Detect Tech vs Non-Tech variant from CLAUDE.md or by checking presence of git repo:
 
-- Tech (git repo present): copy `aos/templates/hooks/memory-stop.sh` → `.claude/hooks/memory-stop.sh`.
-- Non-Tech (no git repo OR CLAUDE.md indicates Non-Tech team): copy `aos/templates/hooks/memory-stop-nontech.sh` → `.claude/hooks/memory-stop.sh`.
+- Tech (git repo present): copy `templates/hooks/memory-stop.sh` → `.claude/hooks/memory-stop.sh`.
+- Non-Tech (no git repo OR CLAUDE.md indicates Non-Tech team): copy `templates/hooks/memory-stop-nontech.sh` → `.claude/hooks/memory-stop.sh`.
 
-Copy `aos/templates/hooks/janitor-surface.sh` and `janitor-delta.sh` to `.claude/hooks/` regardless of variant. Make all `.sh` files executable.
+Copy `templates/hooks/janitor-surface.sh` and `janitor-delta.sh` to `.claude/hooks/` regardless of variant. Make all `.sh` files executable.
 
 Move v1's `.claude/hooks/quality-gate.sh` (if present) to `.claude/hooks/_v1-deprecated/`.
 
 ### Step 8 — Replace `settings.json`
 
-Copy `aos/templates/settings.json` → `.claude/settings.json`. If the existing `settings.json` has user customizations beyond hook registration, merge rather than replace — preserve `env`, `permissions`, etc.
+Copy `templates/settings.json` → `.claude/settings.json`. If the existing `settings.json` has user customizations beyond hook registration, merge rather than replace — preserve `env`, `permissions`, etc.
 
 ### Step 9 — Update `CLAUDE.md`
 

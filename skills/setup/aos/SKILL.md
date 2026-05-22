@@ -214,7 +214,7 @@ Create in this order:
 
 Three files in `.claude/rules/`:
 
-**`brand-voice.md`** (STATIC, no `paths`) — copy from `aos/templates/rules/brand-voice.md`. This file loads globally, every turn.
+**`brand-voice.md`** (STATIC, no `paths`) — copy from `templates/rules/brand-voice.md`. This file loads globally, every turn.
 
 **`<primary>-rules.md`** (DYNAMIC, `paths`-scoped) — named after the primary output folder from [3]. Example for a BD team with `proposals/`:
 
@@ -233,7 +233,7 @@ Content: required structure for proposals, pre-finalization checklist, ICP-speci
 
 Per [ADR-0005](docs/adr/0005-hook-architecture.md), wire **Stop + SessionStart**, warn-only.
 
-Copy from `aos/templates/hooks/`:
+Copy from `templates/hooks/`:
 
 - **Tech variant** (workspace has git initialized): copy `memory-stop.sh` → `.claude/hooks/memory-stop.sh`
 - **Non-Tech variant** (no git, or team type is Non-Tech): copy `memory-stop-nontech.sh` → `.claude/hooks/memory-stop.sh`
@@ -242,7 +242,7 @@ Always copy: `janitor-surface.sh` and `janitor-delta.sh` → `.claude/hooks/`.
 
 Make all `.sh` files executable: `chmod +x .claude/hooks/*.sh`.
 
-Copy `aos/templates/settings.json` → `.claude/settings.json`. It already registers Stop + SessionStart correctly.
+Copy `templates/settings.json` → `.claude/settings.json`. It already registers Stop + SessionStart correctly.
 
 ### Layer 5 — Agents + Skills
 
@@ -254,12 +254,12 @@ Copy `aos/templates/settings.json` → `.claude/settings.json`. It already regis
   - `## Domain Knowledge` — from [6]
   - `## Red Lines` — from [4] and [5]
 
-- **`research-analyst.md`** (STATIC) — copy from `aos/templates/agents/research-analyst.md`.
+- **`research-analyst.md`** (STATIC) — copy from `templates/agents/research-analyst.md`.
 
 **Skills** (`.claude/skills/`):
 
-- **`curator.md`** (STATIC) — copy from `aos/templates/skills/curator.md`.
-- **`janitor.md`** (STATIC) — copy from `aos/templates/skills/janitor.md`.
+- **`curator.md`** (STATIC) — copy from `templates/skills/curator.md`.
+- **`janitor.md`** (STATIC) — copy from `templates/skills/janitor.md`.
 - **`<anchor>.md`** (DYNAMIC) — name derived from [2] anchor workflow. Required sections:
   - `description:` listing trigger phrases the user might say to invoke this workflow
   - `## When to use` — concrete cues

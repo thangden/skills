@@ -1,0 +1,6 @@
+{
+  "name": "thangden-skills",
+  "skills": [
+    "./skills/setup/aos"
+  ]
+}
