@@ -63,6 +63,7 @@ Parse `.claude/memory/system-knowledge.md` by H2 (`## Heading`) and H3 (`### Sub
 
 - For each H2 section, create an Entry at `.claude/memory/<slug>.md` where `<slug>` is the kebab-case of the heading text (≤40 chars).
 - Frontmatter for each Entry:
+
   ```yaml
   ---
   name: <slug>
@@ -71,6 +72,7 @@ Parse `.claude/memory/system-knowledge.md` by H2 (`## Heading`) and H3 (`### Sub
   scope: team
   ---
   ```
+
 - Body: the section content verbatim, minus the original H2/H3 heading line.
 - **Fallback:** if parse fails (no H2 headings, or malformed file), write one Entry `name: legacy-system-knowledge, type: project, scope: team` containing the entire file body. Log a WARNING and recommend the user run Janitor's Bloat detection later.
 
@@ -87,6 +89,7 @@ If a file already exists at the destination, prompt user: merge, overwrite, or r
 For each file in `.claude/memory/episodic/` (matching pattern `YYYY-MM-DD.md`):
 
 - Add frontmatter:
+
   ```yaml
   ---
   name: episodic-YYYY-MM-DD
@@ -95,6 +98,7 @@ For each file in `.claude/memory/episodic/` (matching pattern `YYYY-MM-DD.md`):
   scope: team
   ---
   ```
+
 - Move file from `.claude/memory/episodic/` to `.claude/memory/episodic-YYYY-MM-DD.md` (flatten the subfolder).
 - After all moved, `rmdir .claude/memory/episodic` if empty.
 
@@ -126,13 +130,19 @@ Copy `aos/templates/settings.json` → `.claude/settings.json`. If the existing 
 
 ### Step 9 — Update `CLAUDE.md`
 
-Append (do not replace) the following sections if absent:
+Append (do not replace) the following sections if absent, wrapped in a marker block so `/aos --rollback` can locate and remove them:
 
-- `## Memory Layer` — describe the two Scopes (`team` / `personal`), reference Curator + Janitor
-- `## Skill Routing` — point to `.claude/skills/` priority, list Curator + Janitor
-- `## Operating Constraints` — reference Memory Guard warn-only behavior
+```markdown
+<!-- aos-v2:start -->
+## Memory Layer (aos v2)
 
-If sections already exist with different wording, leave alone and surface as TODO in the user's Tracker.
+<two-Scope description, Curator/Janitor references, hook architecture note>
+<!-- aos-v2:end -->
+```
+
+If a section like `## Skill Routing` already exists with different wording (typical for v1 workspaces that listed `/memory-curator` and `/memory-janitor`), do not edit it — surface a TODO in the user's Tracker (`.claude/active-context.md`) so the user can reconcile manually.
+
+The marker block (`<!-- aos-v2:start --> ... <!-- aos-v2:end -->`) is the contract that lets rollback reverse this change cleanly. Do not write aos-v2 content outside the markers.
 
 ### Step 10 — Write `aos-version`
 
@@ -203,6 +213,15 @@ Next:
 5. Log to a fresh episodic entry (v1-style, since we're back in v1): note the rollback. If the v1 episodic location is `.claude/memory/episodic/YYYY-MM-DD.md`, append there; otherwise create.
 
 **Why move-then-restore instead of `rm -rf .claude/* && cp`.** The backup folder is a child of `.claude/`. A naive `rm -rf .claude/*` would delete the backup before the `cp` could read from it — silent data loss. Moving the backup to a sibling temp path first decouples the source from the destination.
+
+### Rollback step 5 — Revert root-file changes
+
+After step 4 restores `.claude/`, also reverse the migration's root-file edits:
+
+- **CLAUDE.md**: grep-remove the marker block. `sed -i.bak '/<!-- aos-v2:start -->/,/<!-- aos-v2:end -->/d' CLAUDE.md && rm CLAUDE.md.bak`. If no marker block is found, log a warning — the user may have manually edited CLAUDE.md and rollback cannot safely revert.
+- **`.gitignore`**: if `.gitignore` did not exist before migration (which is typical for Non-Tech workspaces), delete it. If it did exist, remove just the aos v2 pattern block — either via a similar marker or by line-matching the specific patterns added in step 11.
+
+The backup itself does not capture these root files in C-narrow. C-broad may extend the backup scope, see the C-broad ADR backlog.
 
 ## Failure handling
 
