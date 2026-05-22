@@ -1,1 +1,11 @@
 PUSH_WHEN_READY.sh
+
+# macOS
+.DS_Store
+
+# aos v2 runtime artifacts — generated, not source
+.claude/.curator-active
+.claude/.janitor-applied
+.claude/memory/_archive/
+.claude/janitor-report-*.md
+.claude/_v1-backup-*/
