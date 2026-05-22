@@ -1,469 +1,399 @@
 ---
 name: aos
 description: >-
-  Use this skill whenever the user wants to set up an AI workspace for their
-  team — including phrases like: set up workspace for my team, configure Claude
-  for our team, set up CLAUDE.md + agents + memory + hooks, onboard a new
-  workspace, bootstrap the AI layer, initialize an AI operating system, init
-  .claude/ from scratch, set up 5 layers for the team, or any intent to make
-  Claude act as a real team member. Creates all 5 layers (CLAUDE.md,
-  .claude/memory/, .claude/rules/, .claude/hooks/, .claude/agents/) for any
-  team type — Sales, Marketing, Operations, Engineering, Product — via a smart
-  interview that scans workspace context first.
+  Use this skill when the user wants to set up or upgrade an Agentic OS
+  workspace — phrases like "set up workspace for my team", "configure
+  Claude for our team", "set up CLAUDE.md + memory + hooks", "onboard a
+  new workspace", "bootstrap the AI layer", "initialize an AI operating
+  system", "init .claude/", "set up 5 layers", "upgrade aos to v2", or
+  any intent to make Claude act as a real team member with persistent
+  memory and quality gates. Supports three modes: fresh setup (default),
+  /aos --upgrade for migrating a v1 workspace to v2, and /aos --rollback
+  for reverting a migration via the backup folder. Works for both Tech
+  (engineers, devs) and Non-Tech (BD, MKT, OPS, product) teams.
 ---
 
-# Skill: AOS — Agentic OS Setup
+# Skill: aos v2 — Agentic OS Setup
 
-This skill bootstraps a complete 5-Layer Agentic OS (Kernel → Memory → Rules → Hooks → Agents/Skills) for any team or role. The output is a ready-to-use workspace with `demo-prompts.md` to test immediately after setup.
+Bootstrap or upgrade a 5-layer Agentic OS workspace: **Kernel** (CLAUDE.md + SOUL.md) → **Memory** (Workspace + User scopes) → **Rules** (paths-scoped progressive disclosure) → **Hooks** (Stop + SessionStart, warn-only) → **Agents + Skills** (Curator, Janitor, team-specific personas).
+
+**Authority:** [CONTEXT.md](CONTEXT.md) (glossary, 17 terms) and [docs/adr/0001-0007](docs/adr/) (architecture decisions). Always read the relevant ADR before deviating from the patterns in this file.
 
 ---
 
-## PHASE 0A: CONTEXT SCAN
+## Modes
 
-**Run before everything — ask nothing until the scan is complete.**
+- **`/aos`** (default) — generate a fresh workspace, OR fill gaps in an existing one (Detection Gate decides)
+- **`/aos --upgrade`** — migrate a v1 workspace to v2 per [migrations/v1-to-v2.md](migrations/v1-to-v2.md) ([ADR-0007](docs/adr/0007-migration-v1-to-v2.md))
+- **`/aos --rollback`** — restore from `.claude/_v1-backup-*` (only valid after `--upgrade`)
 
-Read the workspace in priority order (stop when context is sufficient, max 5 files):
+---
+
+## PHASE 0A: Context Scan
+
+**Run before any question. Stop when context is sufficient, max 5 files.**
+
+Read in priority order:
 
 1. `README.md` — project description, team info, tech stack
-2. `package.json` or `pyproject.toml` / `pom.xml` / `Cargo.toml` — language & framework
+2. `package.json` / `pyproject.toml` / `Cargo.toml` — language and framework
 3. `CLAUDE.md` (if present) — existing rules, personas, constraints
-4. Top-level folder structure (`ls -la`) — workflow hints from folder names
-5. `.env.example` or `docker-compose.yml` — environment / service hints
+4. Top-level folder listing — workflow hints from folder names
+5. `.env.example` or `docker-compose.yml` — environment / services
 
-**Scan limits:** max 5 files, skip files > 50KB, **never read actual `.env` files**.
+**Scan limits:** skip files > 50KB; **never read actual `.env` files**.
 
-After scanning, show a summary for the user to confirm:
+After scanning, summarize for the user:
 
 ```text
-I've scanned the workspace and inferred:
-- Team type: [Tech FE / Tech BE / Non-tech / Unknown]
-- Tech stack: [Next.js 15 + TypeScript / Python FastAPI / N/A]
+Scan summary:
+- Team type: [Tech FE / Tech BE / Non-Tech / Unknown]
+- Tech stack: [Next.js + TS / Python FastAPI / N/A]
 - Primary workflow hint: [from folder names: proposals/, content/, reports/...]
-- Existing AOS config: [CLAUDE.md present / Nothing found]
+- Existing aos: [v1 detected / v2 detected / nothing found]
 
-I'll skip questions about information that's already clear.
 Anything to correct before I proceed?
 ```
 
-**Inference → skipped questions mapping:**
+**Inference → skipped questions** (apply only after user confirms scan summary):
 
-| Inferred from scan | Skip question |
+| Inferred from scan | Phase 1 question to skip |
 | --- | --- |
-| README clearly describes team/role | [1] Team & Role |
+| README clearly describes team & role | [1] Team & Role |
 | `package.json` / lockfile with framework | Tech stack portion of [6] |
 | Folders like `proposals/`, `content/`, `reports/` exist | [3] Folder Structure |
 | `CLAUDE.md` has red lines / safety constraints | [4] and [5] |
 
-If user confirms correct → skip corresponding questions in Phase 1.
-If user corrects → note the correction, ask that specific question.
-If nothing can be inferred (empty repo with no README) → skip scan, go straight to Phase 1.
+---
+
+## PHASE 0B: Detection Gate
+
+After Phase 0A, inspect `.claude/` and `aos-version`:
+
+| State detected | Default mode | Action |
+| --- | --- | --- |
+| `.claude/` absent | `/aos` fresh | Skip to Phase 1 |
+| `.claude/aos-version` present, value = `2.0.0` | `/aos` fill-gaps | Show fill-gaps preview, then Phase 1 only for what's missing |
+| `.claude/aos-version` absent, `.claude/memory/system-knowledge.md` present | v1 detected | Suggest `/aos --upgrade`; if user insists on fresh, ask whether to backup existing first |
+| `.claude/` present but no aos markers (not a v1 workspace either) | Manual choice | Ask: A) full fresh, overwrite OR B) fill-gaps, keep existing |
+
+For fill-gaps mode, render a dry-run preview:
+
+```text
+Dry-run preview — files to be created or skipped:
+✓ Create: .claude/skills/curator.md (not found)
+- Skip: .claude/agents/bd-senior.md (already exists)
+✓ Create: .claude/skills/janitor.md (not found)
+✓ Update: CLAUDE.md (add Memory Layer section)
+
+Proceed? (yes / no)
+```
+
+**Stop-loss for ambiguous workspaces:** if multiple CLAUDE.md files from different projects are detected (e.g. monorepo with subprojects each having their own), ask the user to confirm which workspace is the target before continuing.
 
 ---
 
-## PHASE 0B: DETECTION GATE
+## PHASE 0C: Mode Dispatch
 
-**After scanning, inspect the workspace:**
+Based on user explicit flag and Detection Gate:
 
-1. Check whether `.claude/` exists
-2. If it **does** → list what's already there:
-
-```text
-I see this workspace already has:
-- .claude/agents/: [list of files]
-- .claude/skills/: [list of files]
-- CLAUDE.md: [present / not found]
-
-What would you like to do?
-(A) Full fresh setup — overwrite existing files
-(B) Fill in the gaps only — keep existing files as-is
-```
-
-1. If user picks **(B)** → show a **Dry-run Preview** before creating any file:
-
-```text
-Dry-run Preview — files to be created or skipped:
-✅ Create: CLAUDE.md (not found)
-✅ Create: .claude/memory/ (not found)
-⏭  Skip: .claude/agents/bd-senior.md (already exists — keeping as-is)
-✅ Create: .claude/skills/[anchor-workflow].md
-
-Confirm? (yes / no)
-```
-
-1. If user picks **(A)** or `.claude/` doesn't exist → continue to Phase 1 normally.
-
-**STOP-LOSS for ambiguous workspaces:** If multiple CLAUDE.md files from different projects are detected → ask the user to confirm this is the correct workspace before continuing.
+- User typed `/aos --upgrade` → go to **PHASE 2-UPGRADE**
+- User typed `/aos --rollback` → go to **PHASE 2-ROLLBACK**
+- Detection says v1, user wants upgrade → **PHASE 2-UPGRADE**
+- Otherwise → **PHASE 1** (interview), then **PHASE 2-FRESH** (or fill-gaps)
 
 ---
 
-## PHASE 1: DYNAMIC INTERVIEW
+## PHASE 1: Dynamic Interview
 
 **Rules:**
 
-- Ask **one question at a time**, wait for an answer before asking the next
-- Do not number questions like "Question 1/6" — ask naturally, like a colleague
-- If the user's answer covers multiple questions → merge and skip the related ones
-- **Skip any question already answered by Phase 0A** — never ask twice
+- Ask **one question at a time**, wait for an answer before the next.
+- Do not announce question numbers. Ask naturally.
+- If the user's answer covers multiple questions, merge and skip the related ones.
+- Skip any question already answered by Phase 0A.
 
-**STOP-LOSS:** If after 3–4 questions the user continues to give vague answers ("I don't know", "up to you", "anything works") → STOP immediately. Do not generate files. Return: *"AOS needs specific information about your workflow and output structure to set up correctly. Please clarify your intent and run `/aos` again."*
+**Stop-loss:** If after 3-4 questions the user gives only vague answers ("I don't know", "anything works"), STOP. Do not generate. Return:
 
-**6 questions to collect (combinable, skippable if already inferred):**
+> *"aos needs specific information about your workflow and output structure to set up correctly. Please clarify your intent and run `/aos` again."*
+
+**Six questions:**
 
 **[1] Team & Role**
 > "Which team or role are you setting this up for? What is their primary job?"
 
-**[2] Anchor Use Case** *(most important — never skip)*
-> "Describe the team's most important workflow: from **what input** → through **what steps** → to **what output**?
-> Example: Meeting notes → Research the company → Draft proposal → Final proposal"
+**[2] Anchor Use Case** *(never skip — most important)*
+> "Describe the team's most important workflow: from **what input**, through **what steps**, to **what output**? Example: Meeting notes → research the company → draft proposal → final proposal."
 
 **[3] Folder Structure**
 > "Where is that output usually saved? Are there other folders the team works in regularly?"
-> *(Used to name path-based rules. Examples: `proposals/`, `outreach/`, `content/`, `campaigns/`)*
 
 **[4] Red Lines**
-> "Name 2–3 things AI must absolutely never do or commit to in this workspace."
+> "Name 2-3 things AI must absolutely never do or commit to in this workspace."
 
 **[5] Safety Constraints**
-> "What information must never be shared or committed without explicit approval?"
-> *(Examples: pricing matrix, contract terms, client data, internal roadmap)*
+> "What information must never be shared or committed without explicit approval? (pricing, contracts, client data, internal roadmap...)"
 
 **[6] Tone & Domain Knowledge**
-> "What's the team's communication style: professional, casual, data-driven, creative...?
-> And what domain-specific knowledge does the agent need?" *(Ideal Customer Profile (ICP), pricing tiers, objection handling, technical details...)*
+> "What's the team's communication style — professional, casual, data-driven, creative? And what domain knowledge does the agent need (ICP, pricing tiers, objection handling, technical context)?"
 
 ---
 
-## PHASE 2: GENERATION
+## PHASE 2-FRESH: Generation for new workspace
 
-Once enough information is collected — **ask nothing more** — create files in order from Layer 1 to Layer 5.
-
----
+Generate files in order Layer 1 → Layer 5. Use Curator's **interview-mode** for memory seed Entries ([ADR-0006](docs/adr/0006-curator-on-self-seed.md)).
 
 ### Layer 1 — Kernel
 
-**`CLAUDE.md`** — Constitution, must stay under 200 lines:
+**`CLAUDE.md`** — DYNAMIC, composed from interview answers. Keep under 200 lines. Required sections:
 
-- Team description + primary mission
-- Ideal Customer Profile (ICP) / who the team serves
-- 2–3 golden rules (from red lines in Phase 1)
-- Default output format (markdown with clear headers)
-- Standard tone
-- Skill Routing: explicit link to `.claude/skills/` to prioritize project-level skills over global ones
-- Agent Routing: explicit link to `.claude/agents/` to prioritize project-level personas over global ones
+- `# CLAUDE.md — <Workspace name>` title
+- `## Mission` — from [1] + [2]
+- `## ICP` — who the team serves (from [1])
+- `## Golden Rules` — 2-3 rules drawn from [4]
+- `## Default Output Format` — markdown headers, bullet caps, file-path style
+- `## Tone` — from [6], short sentences, numbers over adjectives
+- `## Skill Routing` — list `.claude/skills/curator.md` and `.claude/skills/janitor.md` as memory ecosystem
+- `## Agent Routing` — list `.claude/agents/` priority; mention `[team]-senior` and `research-analyst`
+- `## Memory Layer` — describe the two Scopes (`team` → Workspace Memory, `personal` → User Memory) per [ADR-0001](docs/adr/0001-memory-scope-routing.md); note Curator default is `team`
+- `## Source of Truth` — link CONTEXT.md (if applicable), tracker, MEMORY.md
+- `## Operating Constraints` — 1 session = 1 goal, `/compact` discipline, Memory Guard warn-only (per [ADR-0005](docs/adr/0005-hook-architecture.md))
 
-**`SOUL.md`** — Runtime policies:
+**`SOUL.md`** — DYNAMIC. Runtime policies and red lines:
 
-- What the agent is allowed to do
-- Safety constraints: information not to be shared or committed (from Phase 1 [5])
-- Detailed tone guide
-- Red lines as a bullet list
+- `## What this AI is allowed to do` — concrete capabilities granted
+- `## What this AI must NOT do without explicit instruction` — destructive ops, pushes, etc.
+- `## Information that must never appear` — from [5]
+- `## Tone Guide` — detailed version of CLAUDE.md tone
+- `## Red Lines` — bullet list from [4]
 
----
+### Layer 2 — Memory + Tracker
 
-### Layer 2 — Memory
+Create in this order:
 
-Create folder **`.claude/memory/`** with 3 core components:
+1. **`.claude/aos-version`** (STATIC) — single line `2.0.0`.
 
-**`.claude/memory/system-knowledge.md`** — Long-term architectures & decisions index:
+2. **`.claude/active-context.md`** (DYNAMIC) — the **Tracker**, not a Memory Entry ([ADR-0002](docs/adr/0002-entry-schema-and-tracker-separation.md)):
 
-- Seed with 3–5 entries from Phase 1 information
-- Entry format: `- [Important decision/fact ~150 chars] → [link to detail file if any]`
+   ```markdown
+   # Active Context — Sprint Tracker
 
-**`.claude/memory/active-context.md`** — Active state & sprint tracking:
+   Mutable sprint state. Not a Memory Entry — lives outside `.claude/memory/`.
 
-```markdown
-# Active Context & Trajectory
-Primary task tracker / backlog (Jira, Linear, Notion, etc.). Edit items in this list:
+   ## In Progress
+   - [ ] Customize agent persona with real domain knowledge
 
-## In Progress
-- [ ] Customize agent persona with real team domain knowledge
+   ## To Do
+   - [ ] Run the anchor workflow end-to-end for the first time
+   - [ ] Reference domain knowledge and route via Curator into Memory
 
-## To Do
-- [ ] Test anchor use case end-to-end for the first time
-- [ ] Reference real domain knowledge and record it in system-knowledge.md
+   ## Done
+   - [x] aos v2 5-layer setup complete
 
-## Done
-- [x] AI OS 5-layer setup complete
-```
+   _Last updated: <YYYY-MM-DD>_
+   ```
 
-**`.claude/memory/episodic/`** — Create empty folder + today's file `YYYY-MM-DD.md`:
+3. **`.claude/memory/`** directory + seed Entries via Curator interview-mode. For each Phase 1 answer, invoke Curator with metadata `source: aos-interview, question-key: <q-key>`:
 
-- Record a short log: team setup, chosen anchor use case, key architecture decisions
+   | Question | question-key | Resulting Entry |
+   | --- | --- | --- |
+   | [1] Team & Role | `team-role` | `type: project, scope: team, name: team-role` |
+   | [2] Anchor Use Case | `anchor-workflow` | `type: project, scope: team, name: anchor-workflow` |
+   | [3] Folder Structure | `folder-structure` | `type: reference, scope: team, name: folder-structure` |
+   | [4] Red Lines | `red-lines` | `type: feedback, scope: team, name: red-lines` |
+   | [5] Safety Constraints | `safety-constraints` | `type: feedback, scope: team, name: safety-constraints` |
+   | [6] Tone & Domain Knowledge | `tone-style` (split into two if needed: `tone-style` + `domain-knowledge`) | `type: feedback, scope: team` and `type: project, scope: team` |
 
----
+   Curator interview-mode (per ADR-0006) skips confidence questions and uses the `question-key` as filename slug deterministically.
+
+4. **`.claude/memory/MEMORY.md`** — DYNAMIC index. Group seed Entries by `type` (Project / Feedback / Reference / User), one bullet each: `- [name](name.md) — first line of description`.
+
+5. **`_archive/`** — do NOT pre-create. Janitor creates it on first `/clean-memory --apply`.
 
 ### Layer 3 — Rules
 
-Create **3 files** in `.claude/rules/`, names are dynamic based on input:
+Three files in `.claude/rules/`:
 
-**File 1: `brand-voice.md`** — No `paths` (loaded globally at all times):
+**`brand-voice.md`** (STATIC, no `paths`) — copy from `aos/templates/rules/brand-voice.md`. This file loads globally, every turn.
 
-```yaml
----
-description: [Team] brand voice and communication standards — loaded globally
----
-```
-
-Content: tone guide, words to avoid, team writing standards.
-
-**File 2: `[primary-folder]-rules.md`** — Name = primary output folder (e.g., `proposal-rules.md`):
+**`<primary>-rules.md`** (DYNAMIC, `paths`-scoped) — named after the primary output folder from [3]. Example for a BD team with `proposals/`:
 
 ```yaml
 ---
-description: Rules for [primary task] — only loaded when working with [primary-folder]/
-paths: ["[primary-folder]/**"]
+description: Rules for proposal creation — only loaded when working with proposals/
+paths: ["proposals/**"]
 ---
 ```
 
-Content: required structure for primary output, pre-finalization checklist.
+Content: required structure for proposals, pre-finalization checklist, ICP-specific framing.
 
-**File 3: `[secondary-folder]-rules.md`** — Name = secondary folder (e.g., `outreach-rules.md`):
-
-```yaml
----
-description: Rules for [secondary task] — only loaded when working with [secondary-folder]/
-paths: ["[secondary-folder]/**"]
----
-```
-
-Content: rules specific to the secondary task.
-
----
+**`<secondary>-rules.md`** (DYNAMIC, `paths`-scoped) — named after the secondary folder from [3], if any. Same structure.
 
 ### Layer 4 — Hooks
 
-**`.claude/settings.json`**:
+Per [ADR-0005](docs/adr/0005-hook-architecture.md), wire **Stop + SessionStart**, warn-only.
 
-```json
-{
-  "hooks": {
-    "Stop": [
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "bash .claude/hooks/quality-gate.sh"
-          }
-        ]
-      }
-    ]
-  }
-}
+Copy from `aos/templates/hooks/`:
+
+- **Tech variant** (workspace has git initialized): copy `memory-stop.sh` → `.claude/hooks/memory-stop.sh`
+- **Non-Tech variant** (no git, or team type is Non-Tech): copy `memory-stop-nontech.sh` → `.claude/hooks/memory-stop.sh`
+
+Always copy: `janitor-surface.sh` and `janitor-delta.sh` → `.claude/hooks/`.
+
+Make all `.sh` files executable: `chmod +x .claude/hooks/*.sh`.
+
+Copy `aos/templates/settings.json` → `.claude/settings.json`. It already registers Stop + SessionStart correctly.
+
+### Layer 5 — Agents + Skills
+
+**Agents** (`.claude/agents/`):
+
+- **`<team>-senior.md`** (DYNAMIC) — name dynamic from team type. Persona built from [1], [2], [6]. Required sections:
+  - YAML frontmatter: `name`, `description`, `model: sonnet`, `tools: []`
+  - `## Persona` — experience level, how they think, communication style
+  - `## Domain Knowledge` — from [6]
+  - `## Red Lines` — from [4] and [5]
+
+- **`research-analyst.md`** (STATIC) — copy from `aos/templates/agents/research-analyst.md`.
+
+**Skills** (`.claude/skills/`):
+
+- **`curator.md`** (STATIC) — copy from `aos/templates/skills/curator.md`.
+- **`janitor.md`** (STATIC) — copy from `aos/templates/skills/janitor.md`.
+- **`<anchor>.md`** (DYNAMIC) — name derived from [2] anchor workflow. Required sections:
+  - `description:` listing trigger phrases the user might say to invoke this workflow
+  - `## When to use` — concrete cues
+  - `## Required input` — from [2]
+  - `## Execution steps` — typically (1) `@research-analyst` to gather, (2) `@<team>-senior` to draft, (3) review and finalize
+  - `## Output` — from [2]
+  - `## Trigger` — `/<workflow-name>`
+
+### `.gitignore` updates
+
+Append (deduplicated) to existing `.gitignore`:
+
+```text
+.claude/.curator-active
+.claude/.janitor-applied
+.claude/memory/_archive/
+.claude/janitor-report-*.md
+.claude/_v1-backup-*/
 ```
 
-**`.claude/hooks/quality-gate.sh`** — Quality Gate + Memory Guard.
-
-Two variants depending on team type inferred in Phase 0A:
-
-**Variant A — Non-tech teams (BD, MKT, OPS):** file-based checks, no git commands:
-
-```bash
-#!/bin/bash
-# Stop hook — Quality Gate & Memory Guard
-
-OUTPUT_DIR="[primary-folder-from-phase1]"
-MIN_LINES=5
-ERRORS=0
-
-# -- 1. Output Check --
-if [ ! -d "$OUTPUT_DIR" ]; then
-  echo "Warning: No output found in $OUTPUT_DIR — if the task required creating files, please check." >&2
-else
-  LATEST=$(find "$OUTPUT_DIR" -maxdepth 2 -name "*.md" -newer "$OUTPUT_DIR" 2>/dev/null | head -1)
-  if [ -n "$LATEST" ]; then
-    LINE_COUNT=$(wc -l < "$LATEST")
-    if [ "$LINE_COUNT" -lt "$MIN_LINES" ]; then
-      echo "BLOCKED: $LATEST has only $LINE_COUNT lines — looks incomplete." >&2
-      ERRORS=1
-    else
-      echo "Output check passed — $LATEST ($LINE_COUNT lines)" >&2
-    fi
-  fi
-fi
-
-# -- 2. Memory Guard --
-MEMORY_DIR=".claude/memory"
-if [ -d "$MEMORY_DIR" ]; then
-  RECENT_MEM=$(find "$MEMORY_DIR" -type f -mmin -30 2>/dev/null)
-  if [ -n "$RECENT_MEM" ]; then
-    echo "Memory updated" >&2
-  else
-    echo "BLOCKED: Memory not updated!" >&2
-    echo "Rule: Mark [x] in active-context.md or write a log to episodic/!" >&2
-    ERRORS=1
-  fi
-fi
-
-[ "$ERRORS" -eq 1 ] && { echo "Quality gate FAILED." >&2; exit 2; }
-echo "All checks PASSED" >&2
-exit 0
-```
-
-**Variant B — Tech teams (FE, BE, Full-stack):** adds git-aware checks, uses `find` instead of glob for portability:
-
-```bash
-#!/bin/bash
-# Stop hook — Quality Gate & Memory Guard (Tech variant)
-
-ERRORS=0
-
-# -- 1. Secret Detection (git-aware) --
-if git rev-parse --git-dir > /dev/null 2>&1; then
-  if git diff --cached 2>/dev/null | grep '^\+' | grep -v '^\+\+\+' \
-     | grep -iE "(password|secret|api_key|token)\s*=\s*['\"][^'\"]{8,}" > /dev/null 2>&1; then
-    echo "BLOCKED: Hardcoded secret detected in staged changes!" >&2; ERRORS=1
-  else
-    echo "Secret scan passed" >&2
-  fi
-  # .env guard
-  if git diff --cached --name-only 2>/dev/null | grep -E '^\.env$' > /dev/null 2>&1; then
-    echo "BLOCKED: .env staged — do not commit credentials!" >&2; ERRORS=1
-  fi
-fi
-
-# -- 2. Output Check (use find, not glob /**/) --
-SRC_DIR="[primary-source-dir-from-phase1]"   # e.g. apps/web/src/components
-if [ -d "$SRC_DIR" ]; then
-  LATEST=$(find "$SRC_DIR" -type f \( -name "*.ts" -o -name "*.tsx" \) -newer "$SRC_DIR" 2>/dev/null | head -1)
-  if [ -n "$LATEST" ]; then
-    LINE_COUNT=$(wc -l < "$LATEST")
-    [ "$LINE_COUNT" -lt 5 ] && { echo "BLOCKED: $LATEST too short ($LINE_COUNT lines)" >&2; ERRORS=1; } \
-                             || echo "Code check passed — $LATEST" >&2
-  fi
-fi
-
-# -- 3. Memory Guard --
-MEMORY_DIR=".claude/memory"
-if [ -d "$MEMORY_DIR" ]; then
-  RECENT_MEM=$(find "$MEMORY_DIR" -type f -mmin -30 2>/dev/null)
-  [ -n "$RECENT_MEM" ] && echo "Memory updated" >&2 \
-    || { echo "BLOCKED: Memory not updated — check active-context.md!" >&2; ERRORS=1; }
-fi
-
-[ "$ERRORS" -eq 1 ] && { echo "Quality gate FAILED." >&2; exit 2; }
-echo "All checks PASSED" >&2
-exit 0
-```
-
-> **Generation notes:**
->
-> - Use Variant A for non-tech (BD, MKT, OPS), Variant B for tech (FE, BE, Full-stack)
-> - Replace `[primary-folder]` / `[primary-source-dir]` with real folder names from [3] / Phase 0A scan
-> - Never use bash glob `**/*.ext` — use `find` for portability on macOS (bash 3.x)
-> - Scripts use `>&2` so Claude receives feedback from the hook
+If no `.gitignore` exists, create one with these patterns.
 
 ---
 
-### Layer 5 — Agents + Skill
+## PHASE 2-UPGRADE: Migration v1 → v2
 
-**Agent 1: `.claude/agents/[team]-senior.md`** — Name is dynamic based on team:
+Follow the step-by-step playbook in [migrations/v1-to-v2.md](migrations/v1-to-v2.md). Do not deviate without first writing a new ADR.
 
-```yaml
----
-name: [team]-senior
-description: [Persona description — experience, domain knowledge, communication style, from Phase 1 [6]]
-model: sonnet
-tools: []
----
+Key steps (full detail in playbook):
 
-# [Team] Senior Agent
-
-## Persona
-[Detail: background, experience, how they think]
-
-## Domain Knowledge
-[Team-specific knowledge from Phase 1: ICP, pricing, objection handling, technical knowledge...]
-
-## Red Lines
-[What this agent must never do — from Phase 1 [4] and [5]]
-```
-
-**Agent 2: `.claude/agents/research-analyst.md`** — Fixed, never changes:
-
-```yaml
----
-name: research-analyst
-description: Read-only research specialist. Thorough, factual, always flags uncertainty. Never writes or edits files.
-model: haiku
-tools: [Read, Grep, Glob]
----
-
-# Research Analyst Agent
-
-## Persona
-Systematic researcher. Prioritizes verified sources; explicitly flags uncertainty rather than filling gaps with inference.
-When uncertain → writes "Not yet verified" rather than guessing.
-
-## Approach
-- Read multiple sources before drawing conclusions
-- Return structured summaries with confidence levels
-- Flag all information that needs further verification
-```
-
-**Skill: `.claude/skills/[anchor-workflow-name].md`** — Name = workflow name from anchor use case:
-
-```yaml
----
-description: [Workflow description — what input → what output]
----
-```
-
-Content:
-
-- **When to use:** trigger conditions
-- **Required input:** input type from anchor use case (e.g. meeting notes, raw report, brief)
-- **Execution steps:**
-  1. `@research-analyst` — research/analyze input
-  2. `@[team]-senior` — process and draft output
-  3. Review and finalize
-- **Output:** output type from anchor use case
-- **Trigger:** `/[anchor-workflow-name]`
+1. Pre-flight: confirm v1 shape and absent `aos-version`
+2. Dry-run preview to user; wait for `yes`
+3. Backup `.claude/` → `.claude/_v1-backup-YYYYMMDD/`
+4. Split `system-knowledge.md` into per-H2 Entries (Curator interview-mode)
+5. Move `active-context.md` to `.claude/active-context.md` (Tracker location)
+6. Reformat `episodic/*.md` with frontmatter and flatten subfolder
+7. Generate `MEMORY.md` index
+8. Copy Curator + Janitor skills from templates
+9. Replace hook scripts (variant detection)
+10. Replace `settings.json`
+11. Update `CLAUDE.md` (additive sections only)
+12. Write `.claude/aos-version` = `2.0.0`
+13. Log to today's episodic Entry
 
 ---
 
-## PHASE 3: DOCUMENTATION
+## PHASE 2-ROLLBACK: Restore from backup
 
-**`AIOS-README.md`** at root:
+Follow the rollback section of [migrations/v1-to-v2.md](migrations/v1-to-v2.md).
 
-Required layout:
+1. Locate the most recent `.claude/_v1-backup-*` (if multiple, ask user to pick)
+2. Warn about loss of post-upgrade changes
+3. Require explicit `yes`
+4. Restore: `rm -rf .claude/*` then `cp -r .claude/_v1-backup-YYYYMMDD/. .claude/`
+5. Remove `.claude/aos-version` to ensure v1 shape
+6. Log the rollback
 
-1. **Setup complete** — "Your AI OS for [X] team is ready"
-2. **5-Layer Anatomy** in plain language (no code jargon):
+---
+
+## PHASE 3: Documentation
+
+After PHASE 2-FRESH (do not run after upgrade — the user already has docs):
+
+**`AIOS-README.md`** at workspace root — DYNAMIC. Required sections in plain language:
+
+1. **Setup complete** — "Your aos v2 workspace for `<team>` is ready"
+2. **5-Layer anatomy** in plain words (no jargon):
    - Kernel = Constitution, always loaded
-   - Memory = Long-term memory, never forgotten (`system-knowledge`, `active-context`)
-   - Rules = Laws that load automatically at the right time, saving context
-   - Hooks = Iron discipline (Memory Guard), AI cannot skip it
-   - Agents = Specialized team members, each with one job
-3. **Quick Start** — run the anchor use case immediately using `demo-prompts.md`
-4. **5 Important Tips:**
-   - CLAUDE.md < 200 lines, restart Claude Code after editing it
-   - 1 session = 1 goal, use `/compact` when sessions grow long
-   - Hooks with exit code 2 block task completion
-   - Keep Memory always updated by the agent at the end of each session
-   - Use `@agent-name` to invoke directly, faster than letting the orchestrator choose
+   - Memory = Knowledge that persists; Tracker = sprint state
+   - Rules = Laws loaded automatically at the right time
+   - Hooks = Quality gate (warns, blocks only on schema error)
+   - Agents = Specialized team members
+3. **Quick Start** — invoke the anchor workflow from `demo-prompts.md`
+4. **5 Important tips**:
+   - CLAUDE.md < 200 lines; restart Claude Code after editing
+   - 1 session = 1 goal; `/compact` when long
+   - Hooks warn but rarely block; schema validation is the only hard error
+   - Curator routes Memory automatically — `@curator` to force; `@janitor` for cleanup
+   - Memory has two Scopes: `team` (committed) and `personal` (your machine)
 
-**`demo-prompts.md`** at root — copy-paste ready, real content from anchor use case:
+**`demo-prompts.md`** at workspace root — DYNAMIC. Copy-paste ready:
 
 ```markdown
-# Demo Prompts — [Team] Workspace
+# Demo Prompts — <Team> Workspace
 
-## Full Pipeline — [Anchor Use Case Name]
-[Prompt 1 — invoke research-analyst with real input from anchor use case]
+## Full Pipeline — <Anchor Workflow Name>
 
-[Prompt 2 — invoke [team]-senior with output from previous step]
+<Prompt 1: invoke @research-analyst with real input from anchor use case>
 
-/[skill-name]
+<Prompt 2: invoke @<team>-senior with the research output>
 
-## Test individual agents
-@research-analyst [sample research task relevant to the team]
+/<anchor-workflow-name>
 
-@[team]-senior [sample execution task relevant to the team]
+## Test Curator (Memory ecosystem)
 
-## Update memory after task
-Important: Before closing this session, check off the completed task in `.claude/memory/active-context.md` and write a short log in `.claude/memory/episodic/[today].md` to satisfy the Memory Guard hook.
+ghi nhớ: <a concrete fact relevant to this team, e.g. "ICP is mid-market SaaS companies in APAC">
+
+@curator <some preference, e.g. "always use formal Vietnamese in customer-facing docs">
+
+## Test Janitor
+
+/clean-memory
+
+## Update Tracker before closing session
+
+Mark the current task done in `.claude/active-context.md` if you finished it.
 ```
 
 ---
 
-End of Phase 3: notify the user —
-> "AI OS setup complete. Open `demo-prompts.md` and run the first command to test."
+## Closing notification
+
+After PHASE 2 (any mode) and PHASE 3 complete, tell the user:
+
+> "aos v2 setup complete. Open `demo-prompts.md` and run the first command to test the anchor workflow. Memory ecosystem (Curator + Janitor) is wired — try `ghi nhớ <something>` or `remember <something>` to see Curator route automatically."
+
+For `--upgrade` mode, the closing message also lists the backup path and the rollback command.
+
+---
+
+## ADR cross-reference
+
+| ADR | Title | What this skill enforces |
+| --- | --- | --- |
+| [0001](docs/adr/0001-memory-scope-routing.md) | Memory Scope Routing | Generates only `team` and `personal` Scopes in C-narrow; never creates `~/.claude/memory/` |
+| [0002](docs/adr/0002-entry-schema-and-tracker-separation.md) | Entry Schema + Tracker Separation | Anthropic 4-type frontmatter on every Entry; Tracker outside `.claude/memory/` |
+| [0003](docs/adr/0003-curator-trigger-and-routing.md) | Curator Trigger + Routing | Phase 2 uses Curator interview-mode for memory seed |
+| [0004](docs/adr/0004-janitor-trigger-and-action.md) | Janitor Trigger + Action | Generated Janitor skill respects auto-delta on Stop + manual full scan |
+| [0005](docs/adr/0005-hook-architecture.md) | Hook Architecture | Stop + SessionStart warn-only; schema validation is the single block path |
+| [0006](docs/adr/0006-curator-on-self-seed.md) | Curator-on-Self Seed | Phase 2 dogfoods Curator (no parallel static template engine) |
+| [0007](docs/adr/0007-migration-v1-to-v2.md) | Migration v1 → v2 | `/aos --upgrade` follows migrations/v1-to-v2.md; `/aos --rollback` provided |
+
+---
+
+## Glossary
+
+For any term in **bold** above (Workspace, Workspace Memory, User Memory, Scope, Entry, Tracker, Curator, Janitor, Archive, etc.), see [CONTEXT.md](CONTEXT.md) for the locked definition. Do not invent synonyms.
