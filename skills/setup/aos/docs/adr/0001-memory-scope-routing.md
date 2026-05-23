@@ -1,22 +1,16 @@
-# 0001 — Memory Scope Routing: Hybrid 3-tier
+# 0001 — Memory entries route by scope; C-narrow ships team and personal
 
-**Context.** aos v1 stored everything under `.claude/memory/` (Workspace Memory) and ignored Anthropic's harness-managed `~/.claude/projects/<repo-hash>/memory/` (User Memory). For aos v2, we had to decide whether Workspace and User memory coexist, and how Entries are routed between them.
+aos v1 kept every memory file under `.claude/memory/` and never touched Anthropic's harness-managed `~/.claude/projects/<repo-hash>/memory/`. The two locations have opposite trade-offs: the repo-local one is git-committed and team-shareable but doesn't auto-load; the harness-managed one auto-loads per workspace but never crosses machines. aos v2 uses both, with a single `scope` field on every Memory Entry deciding where it lands.
 
-**Decision.** Every Memory Entry carries a `scope` field. In C-narrow, two values ship: `team` → Workspace Memory (git-committed, team-shared) and `personal` → User Memory (harness-managed, auto-loaded per Workspace). Curator default is `team`; `personal` requires explicit signal. C-broad adds a third value `global` → User Global Memory (`~/.claude/memory/`); it ships only after ADR-0003 (loader mechanism) and ADR-0004 (Promoter sanitization) are accepted.
+In C-narrow, scope takes two values:
 
-**Why.** Workspace-only forfeits the Anthropic auto-load benefit and gives no path to cross-Workspace knowledge sharing. User-only is not git-committed, so a team of N members cannot share knowledge through it (each member starts with empty memory). The 2-Scope hybrid matches the immediate taxonomy of what users save — team facts vs personal preferences — and makes the future `global` Scope a strict superset: Promoter just changes `scope` from `team` to `global` and moves the file. No re-architecture between phases. `global` is deferred because `~/.claude/memory/` has no native Anthropic auto-loader — designing and shipping a custom loader, plus the cross-Workspace leak threat-model, belongs in C-broad with its own ADRs.
+- `team` writes to `.claude/memory/` — git-committed Workspace Memory, the default for new entries.
+- `personal` writes to `~/.claude/projects/<hash>/memory/` — harness-managed User Memory. Requires an explicit signal from the user.
 
-**Considered options.**
+A third value, `global`, would write to `~/.claude/memory/` (User Global Memory). It's deferred to C-broad because that path has no Anthropic auto-loader: shipping it means designing a custom loader plus a threat model for cross-Workspace knowledge leaks. Both belong in their own ADRs, not this one.
 
-- α Workspace-only — rejected: bypasses platform features, no cross-Workspace path.
-- β User-only — rejected: not git-committed, breaks team-shareability.
-- γ Hybrid with `scope` tag, 2 values in C-narrow + 1 deferred to C-broad — chosen.
-- γ' Hybrid shipping all 3 Scopes in C-narrow — rejected: requires loader + leak threat-model in C-narrow, violating the C-narrow scope-cap.
+Workspace-only was rejected because it bypasses the platform's auto-load and offers no cross-Workspace path. User-only was rejected because it isn't git-committed, so a team can't share what they've collectively learned. Shipping all three scopes in C-narrow was rejected because the loader and leak policy are real design work — dragging them in would defeat the point of having a narrow first pass.
 
-**Consequences.**
+The 2-scope hybrid makes the future `global` scope a strict superset: when the Promoter ships, it just changes an Entry's `scope` from `team` to `global` and moves the file. No re-architecture between phases.
 
-- Curator gains a 2-way routing decision in C-narrow (3-way in C-broad); default-to-`team` keeps the common case one-click.
-- Janitor scans two locations in C-narrow, three in C-broad.
-- Migration v1 → v2 tags every existing Entry `scope: team` and is otherwise a no-op.
-- User Global Memory location (`~/.claude/memory/`) is not created in C-narrow; aos must not assume it exists.
-- C-broad blockers recorded as TBD ADRs: User Global Memory loader, and Promoter sanitization + cross-Workspace leak policy. Numbers assigned when written.
+Curator routes between two locations now (three later), Janitor scans accordingly, and migration from v1 tags every existing Entry as `scope: team` and is otherwise a no-op.

@@ -6,15 +6,12 @@ description: >-
   auto-delta on Stop hook when Curator was active this session (Conflict and
   Duplicate only). Produces a report file; never auto-deletes. User executes
   the batch via /clean-memory --apply. Archived Entries move into
-  .claude/memory/_archive/, not deleted. See
-  aos/docs/adr/0004-janitor-trigger-and-action.md.
+  .claude/memory/_archive/, not deleted.
 ---
 
 # Janitor — Memory Scan and Cleanup Skill
 
 Scans active Memory locations (Workspace Memory, and User Memory if `scope: personal` Entries exist) for four problem classes, produces a report, and executes user-approved cleanup on `--apply`.
-
-Authority: [aos/docs/adr/0004-janitor-trigger-and-action.md](../../aos/docs/adr/0004-janitor-trigger-and-action.md) and [aos/CONTEXT.md](../../aos/CONTEXT.md).
 
 ---
 
@@ -40,7 +37,7 @@ Authority: [aos/docs/adr/0004-janitor-trigger-and-action.md](../../aos/docs/adr/
 Two or more Entries assert contradictory information on the same topic.
 
 - Heuristic: shared `name` prefix or strong `description` overlap, plus body content that disagrees
-- Examples: "Aha pricing tier = $5" vs "Aha pricing tier = $4"
+- Example: an Entry saying "ICP pricing = $5/unit" and another saying "ICP pricing = $4/unit" — same topic, contradictory body.
 
 ### Stale
 
@@ -141,8 +138,8 @@ Reads the most recent `janitor-report-*.md` and executes user-approved actions:
 
    ```
    ## Conflict 1
-   - .claude/memory/aha-pricing.md vs .claude/memory/aha-pricing-new.md
-   RESOLUTION: keep aha-pricing-new, archive aha-pricing
+   - .claude/memory/icp-pricing.md vs .claude/memory/icp-pricing-updated.md
+   RESOLUTION: keep icp-pricing-updated, archive icp-pricing
    ```
 
 2. **Per-category action**:

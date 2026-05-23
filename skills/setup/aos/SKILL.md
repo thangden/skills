@@ -382,15 +382,15 @@ For `--upgrade` mode, the closing message also lists the backup path and the rol
 
 ## ADR cross-reference
 
-| ADR | Title | What this skill enforces |
+| ADR | Topic | What this skill enforces |
 | --- | --- | --- |
-| [0001](docs/adr/0001-memory-scope-routing.md) | Memory Scope Routing | Generates only `team` and `personal` Scopes in C-narrow; never creates `~/.claude/memory/` |
-| [0002](docs/adr/0002-entry-schema-and-tracker-separation.md) | Entry Schema + Tracker Separation | Anthropic 4-type frontmatter on every Entry; Tracker outside `.claude/memory/` |
-| [0003](docs/adr/0003-curator-trigger-and-routing.md) | Curator Trigger + Routing | Phase 2 uses Curator interview-mode for memory seed |
-| [0004](docs/adr/0004-janitor-trigger-and-action.md) | Janitor Trigger + Action | Generated Janitor skill respects auto-delta on Stop + manual full scan |
-| [0005](docs/adr/0005-hook-architecture.md) | Hook Architecture | Stop + SessionStart warn-only; schema validation is the single block path |
-| [0006](docs/adr/0006-curator-on-self-seed.md) | Curator-on-Self Seed | Phase 2 dogfoods Curator (no parallel static template engine) |
-| [0007](docs/adr/0007-migration-v1-to-v2.md) | Migration v1 → v2 | `/aos --upgrade` follows migrations/v1-to-v2.md; `/aos --rollback` provided |
+| [0001](docs/adr/0001-memory-scope-routing.md) | Memory scope routing | Generates only `team` and `personal` Scopes in C-narrow; never creates `~/.claude/memory/` |
+| [0002](docs/adr/0002-entry-schema-and-tracker-separation.md) | Entry schema + Tracker separation | Anthropic 4-type frontmatter on every Entry; Tracker outside `.claude/memory/` |
+| [0003](docs/adr/0003-curator-trigger-and-routing.md) | Curator trigger + routing | Phase 2 uses Curator interview-mode for memory seed |
+| [0004](docs/adr/0004-janitor-trigger-and-action.md) | Janitor trigger + action | Janitor respects auto-delta on Stop + manual full scan |
+| [0005](docs/adr/0005-hook-architecture.md) | Hook architecture | Stop + SessionStart warn-only; schema validation is the single block path |
+| [0006](docs/adr/0006-curator-on-self-seed.md) | Curator-on-self seed | Phase 2 dogfoods Curator (no parallel static template engine) |
+| [0007](docs/adr/0007-migration-v1-to-v2.md) | Migration v1 → v2 | `/aos --upgrade` follows the playbook; `/aos --rollback` provided |
 
 ---
 

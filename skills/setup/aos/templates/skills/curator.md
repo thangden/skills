@@ -6,15 +6,12 @@ description: >-
   ("ghi nhớ", "remember", "from now on", "đừng X anymore", or shares a durable
   fact, preference, workflow rule, or external pointer) and explicitly via
   @curator or /curate. Hybrid confidence-driven routing — auto-saves at high
-  confidence and asks one targeted question at low confidence. See
-  aos/docs/adr/0003-curator-trigger-and-routing.md.
+  confidence and asks one targeted question at low confidence.
 ---
 
 # Curator — Memory Routing Skill
 
 Routes information into Workspace Memory (`scope: team`) or User Memory (`scope: personal`) using Anthropic's 4-type Entry schema (`user | feedback | project | reference`).
-
-Authority: [aos/docs/adr/0003-curator-trigger-and-routing.md](../../aos/docs/adr/0003-curator-trigger-and-routing.md) and [aos/CONTEXT.md](../../aos/CONTEXT.md).
 
 ---
 
@@ -88,7 +85,7 @@ When the entry covers multiple types, pick the dominant one and add cross-refere
    - `scope: team` → `.claude/memory/<slug>.md` (git-committed)
    - `scope: personal` → `~/.claude/projects/<repo-hash>/memory/<slug>.md` (harness-managed, machine-local)
 
-4. **Write the marker** (always, on every save): `touch .claude/.curator-active` — the Stop hook reads this to know whether to trigger Janitor delta scan ([ADR-0005](../../aos/docs/adr/0005-hook-architecture.md)).
+4. **Write the marker** (always, on every save): `touch .claude/.curator-active` — the Stop hook reads this to know whether to trigger Janitor delta scan (handled by the Stop hook).
 
 5. **Update the index** if Scope is `team`: append a one-line bullet to `.claude/memory/MEMORY.md` under the appropriate type subheading.
 
@@ -130,7 +127,7 @@ Mirror the platform guidance (Anthropic system memory rules):
 - Git history, recent changes — `git log` is authoritative
 - Debugging recipes — commit messages and code carry the context
 - Anything already documented in CLAUDE.md, SOUL.md, or ADRs (cite the path instead)
-- **Ephemeral task state** — sprint progress lives in `.claude/active-context.md` (the Tracker, [ADR-0002](../../aos/docs/adr/0002-entry-schema-and-tracker-separation.md)), not in Memory
+- **Ephemeral task state** — sprint progress lives in `.claude/active-context.md` (the Tracker, a sibling of `.claude/memory/`), not in Memory
 
 If asked to save one of these, suggest the right home and decline the Memory write.
 

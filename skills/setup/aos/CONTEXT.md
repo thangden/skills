@@ -33,7 +33,7 @@ Memory Entries stored at `~/.claude/projects/<repo-hash>/memory/` and managed by
 _Avoid_: "Anthropic memory", "local memory", "auto memory"
 
 **User Global Memory** _(C-broad, not in C-narrow)_:
-Memory Entries stored at `~/.claude/memory/`. Intended to load in every Workspace the user opens on this machine, but **has no native Anthropic auto-loader** — a custom loader is required. Deferred to C-broad together with the Promoter agent and ADR-0003 (loader mechanism).
+Memory Entries stored at `~/.claude/memory/`. Intended to load in every Workspace the user opens on this machine, but **has no native Anthropic auto-loader** — a custom loader is required. Deferred to C-broad together with the Promoter agent and a future ADR covering the loader mechanism.
 _Avoid_: "global memory", "machine memory"
 
 **Scope**:
@@ -104,10 +104,10 @@ _Avoid_: "compactor"
 
 ## Example dialogue
 
-> **User:** "Ghi nhớ: Aha có 80K driver."
-> **Curator:** "Long-lived fact, no personal context — Scope `team`. Writing Entry to Workspace Memory at `.claude/memory/system-knowledge.md`."
-> **User:** "Khi nào nó thành global?"
-> **Curator:** "Not in C-narrow — Scope `global` and User Global Memory ship with C-broad once ADR-0003 (loader) and ADR-0004 (Promoter sanitization) are accepted."
+> **User:** "Remember: our team operates in three regions."
+> **Curator:** "Long-lived fact, no personal context — Scope `team`. Writing Entry to Workspace Memory at `.claude/memory/team-regions.md`."
+> **User:** "When does it become global?"
+> **Curator:** "Not in C-narrow. Scope `global` and User Global Memory ship with C-broad once the loader ADR and the Promoter-sanitization ADR are written and accepted."
 
 ## Flagged ambiguities
 

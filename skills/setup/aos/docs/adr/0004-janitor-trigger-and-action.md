@@ -1,30 +1,13 @@
-# 0004 — Janitor Trigger Model and Action Policy
+# 0004 — Janitor runs on demand and on Stop; cleanup goes through report-then-apply
 
-**Context.** aos v1 Janitor ran only when the user explicitly invoked `@janitor` or `/clean-memory`, and produced report-only output (the user had to edit files manually to act on suggestions). The result was the same as Curator v1: near-zero usage, because Non-Tech employees do not remember to clean memory and editing five files by hand is friction enough to skip. v2 Curator now auto-saves more aggressively (ADR-0003), so without a parallel upgrade Janitor will fall further behind the write rate.
+aos v1 Janitor ran only when the user explicitly invoked `@janitor` or `/clean-memory`, and produced report-only output — the user then had to edit files by hand to act on suggestions. Result: near-zero usage. Non-Tech users don't think to clean memory on their own, and editing five files manually is friction enough to skip. Now that v2 Curator auto-saves more aggressively (ADR-0003), Janitor falls further behind the write rate every session if its trigger model stays the same.
 
-**Decision.** Janitor uses a dual-trigger, two-step action model:
+Janitor now has two triggers. Manual via `@janitor` or `/clean-memory` runs a full scan of every active Memory location — two in C-narrow, three in C-broad — covering all four problem classes (Conflict, Stale, Bloat, Duplicate). Auto-delta on Stop runs when the Stop hook fires and Curator wrote at least one Entry that session: it scans the Entries just written and their topic-neighbors only, and checks only Conflict and Duplicate. Stale and Bloat require time-window data that delta scans don't have.
 
-- **Triggers.**
-  - Manual: `@janitor` or `/clean-memory` runs a full scan of all active Memory locations (two in C-narrow, three in C-broad).
-  - Auto-delta on Stop: when the Stop hook fires AND Curator wrote at least one Entry this session, Janitor runs a lightweight delta scan limited to (a) the Entries just written and (b) neighbors sharing topic by filename prefix or `name`/`type` frontmatter match. Only Conflict and Duplicate categories are checked in delta mode (Stale and Bloat require full scan).
-- **Action policy.**
-  - Both triggers produce a report file at `.claude/janitor-report-YYYY-MM-DD.md`.
-  - Janitor never auto-deletes. User reviews the report and runs `/clean-memory --apply` to execute the batch (merge Duplicates, archive Stale into `.claude/memory/_archive/`, resolve Conflicts per user-marked decisions). Per-item opt-out via `/clean-memory --apply --skip <item-id>`.
-  - "Archive" means file move into `_archive/`, not delete — restoration is `mv` away.
+Both triggers produce a report at `.claude/janitor-report-YYYY-MM-DD.md`. Janitor never auto-deletes. The user reviews the report, marks resolutions inline where needed, then runs `/clean-memory --apply` to execute the batch: merge Duplicates, archive Stale into `.claude/memory/_archive/`, resolve Conflicts per user-marked decisions. Per-item opt-out is `/clean-memory --apply --skip <item-id>`. "Archive" is a file move into `_archive/`, never delete — restoration is one `mv` away.
 
-**Why.** Auto-delta on Stop catches the most expensive class of memory error — a fresh write that contradicts an existing Entry — while the context is still fresh in the user's head and Curator's announcement is still on screen. Waiting for manual full scan (v1) meant conflicts were typically found 30-90 days later, after working on bad data. The lightweight delta is cheap (small set, no embeddings needed — filename prefix + frontmatter `name`/`type` is enough); only manual triggers full O(N) scan. Two-step apply preserves user control over data destruction without forcing manual file editing, which is what killed v1 cleanup throughput.
+Auto-delta on Stop catches the most expensive class of memory error — a fresh write that contradicts an existing Entry — while the context is still fresh in the user's head and Curator's announcement is still on screen. In v1, conflicts surfaced 30 to 90 days later, after users had been working on bad data. The delta scan is cheap: filename prefix and frontmatter `name`/`type` matching is enough, no embeddings. Two-step apply keeps user control over data destruction without forcing manual file editing, which is what killed v1 cleanup throughput.
 
-**Considered options.**
+Scheduled weekly cron with auto-prune was tempting but rejected for C-narrow: cron infrastructure is plugin-level, auto-prune carries data-loss risk, and the auto-prune ADR can be written after we have field data from the manual-plus-delta model.
 
-- α Manual full scan + report-only — rejected: v1 status quo, proven low usage.
-- β Manual + auto-delta-on-Stop + report-only — rejected: catches issues, but user still has to edit files to act.
-- γ Manual + auto-delta-on-Stop + report-with-batch-apply — chosen.
-- δ Manual + scheduled weekly cron + auto-prune low-risk + report rest — rejected: cron infra is plugin-level (C-broad); auto-prune has data-loss risk; defer to a future ADR after C-broad ships.
-
-**Consequences.**
-
-- Stop hook gains a Curator-active check (marker file or session log — design in hook ADR).
-- `.claude/memory/_archive/` becomes a reserved directory; Curator, Janitor, and Migration must not treat archived Entries as live Memory.
-- Apply step needs a state file recording what was archived/merged in each batch so `--skip` can be re-applied across `--apply` runs.
-- Delta scan latency adds to Stop hook runtime. Acceptable for C-narrow; if user complains, fire-and-forget pattern (write report async, surface at next SessionStart) is the planned mitigation.
-- Janitor must read Curator's confidence log (per ADR-0003) — low-confidence auto-saves are first candidates when flagging Duplicates.
+The Stop hook needs a way to detect Curator activity — the marker file in ADR-0005. `.claude/memory/_archive/` is a reserved directory; Curator, Janitor, and Migration treat its contents as non-live. The `--apply` step writes a state file recording each batch so `--skip` carries across runs. Delta scan adds latency to Stop; if user feedback flags it, fire-and-forget — write the report async and surface it at the next SessionStart — is the planned mitigation. Janitor reads Curator's confidence log when flagging Duplicates, since low-confidence auto-saves are first suspects.
