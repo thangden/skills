@@ -6,6 +6,10 @@
           {
             "type": "command",
             "command": "bash .claude/hooks/memory-stop.sh"
+          },
+          {
+            "type": "command",
+            "command": "bash .claude/hooks/verify-gate.sh"
           }
         ]
       }

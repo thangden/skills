@@ -210,6 +210,8 @@ Create in this order:
 
 5. **`_archive/`** — do NOT pre-create. Janitor creates it on first `/clean-memory --apply`.
 
+6. **`.claude/features/`** (Tech only, [ADR-0009](docs/adr/0009-feature-list-primitive.md)) — feature work-units (work-unit STATE, **not** Memory; keeps the 4-type rule intact). Do NOT pre-create features; copy `templates/features/feature-template.md` → `.claude/features/_TEMPLATE.md` as the reference shape. The harness flips a feature to `passing` via the **feature-evaluator** skill, never the implementing agent.
+
 ### Layer 3 — Rules
 
 Three files in `.claude/rules/`:
@@ -231,25 +233,37 @@ Content: required structure for proposals, pre-finalization checklist, ICP-speci
 
 ### Layer 4 — Hooks
 
-Per [ADR-0005](docs/adr/0005-hook-architecture.md), wire **Stop + SessionStart**, warn-only.
+Per [ADR-0005](docs/adr/0005-hook-architecture.md) wire **Stop + SessionStart** (warn-only memory hooks); plus the **verify-gate** ([ADR-0008](docs/adr/0008-verify-gate.md)) for language-agnostic code verification.
 
-Copy from `templates/hooks/`:
+**Copy from `templates/hooks/`:**
 
-- **Tech variant** (workspace has git initialized): copy `memory-stop.sh` → `.claude/hooks/memory-stop.sh`
-- **Non-Tech variant** (no git, or team type is Non-Tech): copy `memory-stop-nontech.sh` → `.claude/hooks/memory-stop.sh`
+- Memory hook (variant by team type):
+  - **Tech** (git present): `memory-stop.sh` → `.claude/hooks/memory-stop.sh`
+  - **Non-Tech** (no git / Non-Tech team): `memory-stop-nontech.sh` → `.claude/hooks/memory-stop.sh`
+- Always: `janitor-surface.sh`, `janitor-delta.sh` → `.claude/hooks/`
+- **Tech only**: `verify-gate.sh` + `config.env` → `.claude/hooks/`
 
-Always copy: `janitor-surface.sh` and `janitor-delta.sh` → `.claude/hooks/`.
+Make hooks executable: `chmod +x .claude/hooks/*.sh`.
 
-Make all `.sh` files executable: `chmod +x .claude/hooks/*.sh`.
+**Generate `.claude/hooks/config.env`** from Phase 0A tech-stack detection + interview [3]/[4]. Fill verify commands for the detected stack — leave a value empty to skip that step; **never invent a command the repo does not have**:
 
-Copy `templates/settings.json` → `.claude/settings.json`. It already registers Stop + SessionStart correctly.
+| Detected stack | COMPILE_CMD | LINT_CMD | TEST_CMD |
+| --- | --- | --- | --- |
+| Node/TS (`package.json` + tsconfig) | `npx tsc --noEmit` | `eslint .` (if configured) | `vitest run` / `npm test` |
+| Go (`go.mod`) | `go build ./...` | `go vet ./...` | `go test ./...` |
+| Python (`pyproject.toml` / `requirements.txt`) | `mypy .` (if configured) | `ruff check .` (if configured) | `pytest -q` |
+| Non-Tech / unknown | *(empty)* | *(empty)* | *(empty)* |
+
+Set `VERIFY_GATE_MODE=block` for Tech repos, `off` for Non-Tech. Fill `PROTECTED_PATHS` / `RBAC_MARKERS` from [4] if the team named protected areas (e.g. auth routes), and `RED_LINE_PATTERNS` from [4] for paths that must never reach main (e.g. `mock/`).
+
+Copy `templates/settings.json` → `.claude/settings.json` (registers Stop → memory-stop + verify-gate, SessionStart → janitor-surface).
 
 ### Layer 5 — Agents + Skills
 
 **Agents** (`.claude/agents/`):
 
 - **`<team>-senior.md`** (DYNAMIC) — name dynamic from team type. Persona built from [1], [2], [6]. Required sections:
-  - YAML frontmatter: `name`, `description`, `model: sonnet`, `tools: []`
+  - YAML frontmatter: `name`, `description`, `model: sonnet`, and `tools:` scoped to team type — **Tech**: `Read, Grep, Glob, Edit, Write`; **Non-Tech**: `Read, Grep, Glob` (least-privilege; add `Bash` only if the role truly needs it)
   - `## Persona` — experience level, how they think, communication style
   - `## Domain Knowledge` — from [6]
   - `## Red Lines` — from [4] and [5]
@@ -260,6 +274,7 @@ Copy `templates/settings.json` → `.claude/settings.json`. It already registers
 
 - **`curator.md`** (STATIC) — copy from `templates/skills/curator.md`.
 - **`janitor.md`** (STATIC) — copy from `templates/skills/janitor.md`.
+- **`feature-evaluator.md`** (STATIC, Tech only) — copy from `templates/skills/feature-evaluator.md` ([ADR-0009](docs/adr/0009-feature-list-primitive.md)).
 - **`<anchor>.md`** (DYNAMIC) — name derived from [2] anchor workflow. Required sections:
   - `description:` listing trigger phrases the user might say to invoke this workflow
   - `## When to use` — concrete cues
@@ -278,7 +293,10 @@ Append (deduplicated) to existing `.gitignore`:
 .claude/memory/_archive/
 .claude/janitor-report-*.md
 .claude/_v1-backup-*/
+.claude/hooks-audit-*.log
 ```
+
+`.claude/features/` and `.claude/hooks/config.env` are **committed** (team-shared) — do not ignore them.
 
 If no `.gitignore` exists, create one with these patterns.
 
@@ -391,6 +409,8 @@ For `--upgrade` mode, the closing message also lists the backup path and the rol
 | [0005](docs/adr/0005-hook-architecture.md) | Hook architecture | Stop + SessionStart warn-only; schema validation is the single block path |
 | [0006](docs/adr/0006-curator-on-self-seed.md) | Curator-on-self seed | Phase 2 dogfoods Curator (no parallel static template engine) |
 | [0007](docs/adr/0007-migration-v1-to-v2.md) | Migration v1 → v2 | `/aos --upgrade` follows the playbook; `/aos --rollback` provided |
+| [0008](docs/adr/0008-verify-gate.md) | Verify gate (configurable) | Stop runs a language-agnostic 3-layer code gate; block/warn/off via `config.env` |
+| [0009](docs/adr/0009-feature-list-primitive.md) | Feature-list primitive | Work-units in `.claude/features/`; harness flips `passing` via feature-evaluator |
 
 ---
 
