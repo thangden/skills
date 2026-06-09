@@ -7,6 +7,8 @@ description: >-
   Duplicate only). Produces a report file; never auto-deletes. User executes
   the batch via /clean-memory --apply. Archived Entries move into
   .claude/memory/_archive/, not deleted.
+allowed-tools: Read, Write, Edit, Glob, Grep, Bash(mv *), Bash(touch *)
+model: haiku
 ---
 
 # Janitor — Memory Scan and Cleanup Skill

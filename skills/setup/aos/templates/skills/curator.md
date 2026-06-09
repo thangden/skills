@@ -7,6 +7,8 @@ description: >-
   fact, preference, workflow rule, or external pointer) and explicitly via
   @curator or /curate. Hybrid confidence-driven routing — auto-saves at high
   confidence and asks one targeted question at low confidence.
+allowed-tools: Read, Write, Edit, Glob, Grep, Bash(touch *), Bash(mkdir *)
+model: sonnet
 ---
 
 # Curator — Memory Routing Skill
