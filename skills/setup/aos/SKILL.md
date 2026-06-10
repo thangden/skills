@@ -158,7 +158,7 @@ Generate files in order Layer 1 → Layer 5. Use Curator's **interview-mode** fo
 - `## Agent Routing` — list `.claude/agents/` priority; mention `[team]-senior` and `research-analyst`
 - `## Memory Layer` — describe the two Scopes (`team` → Workspace Memory, `personal` → User Memory) per [ADR-0001](docs/adr/0001-memory-scope-routing.md); note Curator default is `team`
 - `## Source of Truth` — link CONTEXT.md (if applicable), tracker, MEMORY.md
-- `## Operating Constraints` — 1 session = 1 goal, `/compact` discipline, Memory Guard warn-only (per [ADR-0005](docs/adr/0005-hook-architecture.md))
+- `## Operating Constraints` — 1 session = 1 goal, `/compact` discipline, Memory Guard warn-only (per [ADR-0005](docs/adr/0005-hook-architecture.md)). Use `/rewind` before risky/speculative edits. Reuse the superpowers SDLC skills (`tdd`, `verification-before-completion`, `subagent-driven-development`, `systematic-debugging`) rather than reinventing.
 
 **`SOUL.md`** — DYNAMIC. Runtime policies and red lines:
 
@@ -213,6 +213,8 @@ Create in this order:
 
 6. **`.claude/features/`** (Tech only, [ADR-0009](docs/adr/0009-feature-list-primitive.md)) — feature work-units (work-unit STATE, **not** Memory; keeps the 4-type rule intact). Do NOT pre-create features; copy `templates/features/feature-template.md` → `.claude/features/_TEMPLATE.md` as the reference shape. The harness flips a feature to `passing` via the **feature-evaluator** skill, never the implementing agent.
 
+7. **`.claude/DECISIONS.md`** — copy `templates/DECISIONS.md`. Log hard-to-reverse decisions + the *why* (continuity artifact, harness-eng L5); ADR-grade ones go to `docs/adr/`.
+
 ### Layer 3 — Rules
 
 Three files in `.claude/rules/`:
@@ -242,7 +244,7 @@ Per [ADR-0005](docs/adr/0005-hook-architecture.md) wire **Stop + SessionStart** 
   - **Tech** (git present): `memory-stop.sh` → `.claude/hooks/memory-stop.sh`
   - **Non-Tech** (no git / Non-Tech team): `memory-stop-nontech.sh` → `.claude/hooks/memory-stop.sh`
 - Always: `janitor-surface.sh`, `janitor-delta.sh` → `.claude/hooks/`
-- **Tech only**: `verify-gate.sh` + `config.env` → `.claude/hooks/`
+- **Tech only**: `verify-gate.sh` + `post-tool-format.sh` + `config.env` → `.claude/hooks/`
 
 Make hooks executable: `chmod +x .claude/hooks/*.sh`.
 
@@ -257,7 +259,7 @@ Make hooks executable: `chmod +x .claude/hooks/*.sh`.
 
 Set `VERIFY_GATE_MODE=block` for Tech repos, `off` for Non-Tech. Fill `PROTECTED_PATHS` / `RBAC_MARKERS` from [4] if the team named protected areas (e.g. auth routes), and `RED_LINE_PATTERNS` from [4] for paths that must never reach main (e.g. `mock/`).
 
-Copy `templates/settings.json` → `.claude/settings.json` (registers Stop → memory-stop + verify-gate, SessionStart → janitor-surface).
+Copy `templates/settings.json` → `.claude/settings.json` (registers Stop → memory-stop + verify-gate, **PostToolUse → post-tool-format** (auto-format the edited file via `FORMAT_CMD`), SessionStart → janitor-surface).
 
 ### Layer 5 — Agents + Skills
 

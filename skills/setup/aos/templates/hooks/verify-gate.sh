@@ -39,6 +39,15 @@ run_layer "L1:lint"    "${LINT_CMD:-}"
 run_layer "L2:test"    "${TEST_CMD:-}"
 [ "${E2E_ON_STOP:-0}" = "1" ] && run_layer "L3:e2e" "${E2E_CMD:-}"
 
+# OTel GenAI span (gated, best-effort, fail-silent — hardens later with a real SDK)
+if [ "${OTEL_ENABLED:-0}" = "1" ] && [ -n "${OTEL_ENDPOINT:-}" ] && command -v openssl >/dev/null 2>&1; then
+  _tid="$(openssl rand -hex 16)"; _sid="$(openssl rand -hex 8)"; _now="$(date +%s)000000000"
+  _failed=false; [ -n "$FAILED" ] && _failed=true
+  curl -sf -m 3 "$OTEL_ENDPOINT/v1/traces" -H 'Content-Type: application/json' -d \
+    "{\"resourceSpans\":[{\"resource\":{\"attributes\":[{\"key\":\"service.name\",\"value\":{\"stringValue\":\"aos\"}}]},\"scopeSpans\":[{\"spans\":[{\"traceId\":\"$_tid\",\"spanId\":\"$_sid\",\"name\":\"aos.verify-gate\",\"kind\":1,\"startTimeUnixNano\":\"$_now\",\"endTimeUnixNano\":\"$_now\",\"attributes\":[{\"key\":\"verify.failed\",\"value\":{\"boolValue\":$_failed}}]}]}]}]}" \
+    >/dev/null 2>&1 || true
+fi
+
 [ -z "$FAILED" ] && exit 0
 
 # Teacher's-red-pen output: what failed + the exact command to reproduce/fix.
