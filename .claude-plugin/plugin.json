@@ -1,8 +1,10 @@
 {
   "name": "thangden-skills",
-  "version": "2.0.0",
+  "version": "2.1.0",
   "description": "aos — Agentic OS: bootstrap a 5-layer Claude Code workspace (Kernel · Memory · Rules · Hooks · Agents+Skills) with a Curator/Janitor memory ecosystem and warn-only quality gates.",
   "author": { "name": "thangden" },
+  "license": "MIT",
+  "homepage": "https://github.com/thangden/skills",
   "keywords": ["agentic-os", "aos", "setup", "memory", "hooks", "harness", "claude-code"],
   "skills": [
     "./skills/setup/aos"

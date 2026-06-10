@@ -73,7 +73,8 @@ After Phase 0A, inspect `.claude/` and `aos-version`:
 | State detected | Default mode | Action |
 | --- | --- | --- |
 | `.claude/` absent | `/aos` fresh | Skip to Phase 1 |
-| `.claude/aos-version` present, value = `2.0.0` | `/aos` fill-gaps | Show fill-gaps preview, then Phase 1 only for what's missing |
+| `.claude/aos-version` = `2.1.0` (current) | `/aos` fill-gaps | Show fill-gaps preview, then Phase 1 only for what's missing |
+| `.claude/aos-version` = `2.0.0` (older v2.0) | `/aos` fill-gaps → v2.1 | Add the v2.1 delta — `verify-gate.sh` + `config.env` + `feature-evaluator.md` + `features/`, register verify-gate on Stop — then bump `aos-version` to `2.1.0` |
 | `.claude/aos-version` absent, `.claude/memory/system-knowledge.md` present | v1 detected | Suggest `/aos --upgrade`; if user insists on fresh, ask whether to backup existing first |
 | `.claude/` present but no aos markers (not a v1 workspace either) | Manual choice | Ask: A) full fresh, overwrite OR B) fill-gaps, keep existing |
 
@@ -157,7 +158,7 @@ Generate files in order Layer 1 → Layer 5. Use Curator's **interview-mode** fo
 - `## Agent Routing` — list `.claude/agents/` priority; mention `[team]-senior` and `research-analyst`
 - `## Memory Layer` — describe the two Scopes (`team` → Workspace Memory, `personal` → User Memory) per [ADR-0001](docs/adr/0001-memory-scope-routing.md); note Curator default is `team`
 - `## Source of Truth` — link CONTEXT.md (if applicable), tracker, MEMORY.md
-- `## Operating Constraints` — 1 session = 1 goal, `/compact` discipline, Memory Guard warn-only (per [ADR-0005](docs/adr/0005-hook-architecture.md))
+- `## Operating Constraints` — 1 session = 1 goal, `/compact` discipline, Memory Guard warn-only (per [ADR-0005](docs/adr/0005-hook-architecture.md)). Use `/rewind` before risky/speculative edits. Reuse the superpowers SDLC skills (`tdd`, `verification-before-completion`, `subagent-driven-development`, `systematic-debugging`) rather than reinventing.
 
 **`SOUL.md`** — DYNAMIC. Runtime policies and red lines:
 
@@ -171,7 +172,7 @@ Generate files in order Layer 1 → Layer 5. Use Curator's **interview-mode** fo
 
 Create in this order:
 
-1. **`.claude/aos-version`** (STATIC) — single line `2.0.0`.
+1. **`.claude/aos-version`** (STATIC) — single line `2.1.0`.
 
 2. **`.claude/active-context.md`** (DYNAMIC) — the **Tracker**, not a Memory Entry ([ADR-0002](docs/adr/0002-entry-schema-and-tracker-separation.md)):
 
@@ -212,6 +213,8 @@ Create in this order:
 
 6. **`.claude/features/`** (Tech only, [ADR-0009](docs/adr/0009-feature-list-primitive.md)) — feature work-units (work-unit STATE, **not** Memory; keeps the 4-type rule intact). Do NOT pre-create features; copy `templates/features/feature-template.md` → `.claude/features/_TEMPLATE.md` as the reference shape. The harness flips a feature to `passing` via the **feature-evaluator** skill, never the implementing agent.
 
+7. **`.claude/DECISIONS.md`** — copy `templates/DECISIONS.md`. Log hard-to-reverse decisions + the *why* (continuity artifact, harness-eng L5); ADR-grade ones go to `docs/adr/`.
+
 ### Layer 3 — Rules
 
 Three files in `.claude/rules/`:
@@ -241,7 +244,7 @@ Per [ADR-0005](docs/adr/0005-hook-architecture.md) wire **Stop + SessionStart** 
   - **Tech** (git present): `memory-stop.sh` → `.claude/hooks/memory-stop.sh`
   - **Non-Tech** (no git / Non-Tech team): `memory-stop-nontech.sh` → `.claude/hooks/memory-stop.sh`
 - Always: `janitor-surface.sh`, `janitor-delta.sh` → `.claude/hooks/`
-- **Tech only**: `verify-gate.sh` + `config.env` → `.claude/hooks/`
+- **Tech only**: `verify-gate.sh` + `post-tool-format.sh` + `config.env` → `.claude/hooks/`
 
 Make hooks executable: `chmod +x .claude/hooks/*.sh`.
 
@@ -256,7 +259,7 @@ Make hooks executable: `chmod +x .claude/hooks/*.sh`.
 
 Set `VERIFY_GATE_MODE=block` for Tech repos, `off` for Non-Tech. Fill `PROTECTED_PATHS` / `RBAC_MARKERS` from [4] if the team named protected areas (e.g. auth routes), and `RED_LINE_PATTERNS` from [4] for paths that must never reach main (e.g. `mock/`).
 
-Copy `templates/settings.json` → `.claude/settings.json` (registers Stop → memory-stop + verify-gate, SessionStart → janitor-surface).
+Copy `templates/settings.json` → `.claude/settings.json` (registers Stop → memory-stop + verify-gate, **PostToolUse → post-tool-format** (auto-format the edited file via `FORMAT_CMD`), SessionStart → janitor-surface).
 
 ### Layer 5 — Agents + Skills
 
@@ -315,11 +318,11 @@ Key steps (full detail in playbook):
 5. Move `active-context.md` to `.claude/active-context.md` (Tracker location)
 6. Reformat `episodic/*.md` with frontmatter and flatten subfolder
 7. Generate `MEMORY.md` index
-8. Copy Curator + Janitor skills from templates
-9. Replace hook scripts (variant detection)
+8. Copy Curator + Janitor + feature-evaluator skills from templates
+9. Replace hook scripts (variant detection) + add `verify-gate.sh` + `config.env`; copy `features/_TEMPLATE.md`
 10. Replace `settings.json`
 11. Update `CLAUDE.md` (additive sections only)
-12. Write `.claude/aos-version` = `2.0.0`
+12. Write `.claude/aos-version` = `2.1.0` (templates now include the v2.1 delta: verify-gate + config.env + feature-evaluator + features/)
 13. Log to today's episodic Entry
 
 ---
