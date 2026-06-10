@@ -24,7 +24,7 @@ Re-adding pulls the newest content from `main`. (`npx skills update` can under-r
 
 ### `setup/`
 
-- [aos](skills/setup/aos/SKILL.md) — Bootstrap a 5-layer Agentic OS workspace (Kernel, Memory, Rules, Hooks, Agents+Skills) for any team — Tech or Non-Tech. **v2.1** adds a language-agnostic **verify-gate** (compile / lint / test on Stop, configurable block·warn·off via `config.env`), a **feature-list** work-unit primitive + `feature-evaluator`, and tool-scoped Curator/Janitor. Supports `/aos` (fresh setup or fill-gaps), `/aos --upgrade` (migrate v1 → v2.x with backup), `/aos --rollback` (restore from backup).
+- [aos](skills/setup/aos/SKILL.md) — Bootstrap a 5-layer Agentic OS workspace (Kernel, Memory, Rules, Hooks, Agents+Skills) for any team — Tech or Non-Tech. **v2.2** adds `make check`, **cold-start** + **clean-state** gates, and gated OTel observability. **v2.1** added a language-agnostic **verify-gate** (compile / lint / test on Stop, configurable block·warn·off via `config.env`), a **feature-list** work-unit primitive + `feature-evaluator`, and tool-scoped Curator/Janitor. Supports `/aos` (fresh setup or fill-gaps), `/aos --upgrade` (migrate v1 → v2.x with backup), `/aos --rollback` (restore from backup).
 
 ## Why these skills exist
 

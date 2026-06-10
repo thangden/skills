@@ -73,8 +73,8 @@ After Phase 0A, inspect `.claude/` and `aos-version`:
 | State detected | Default mode | Action |
 | --- | --- | --- |
 | `.claude/` absent | `/aos` fresh | Skip to Phase 1 |
-| `.claude/aos-version` = `2.1.0` (current) | `/aos` fill-gaps | Show fill-gaps preview, then Phase 1 only for what's missing |
-| `.claude/aos-version` = `2.0.0` (older v2.0) | `/aos` fill-gaps → v2.1 | Add the v2.1 delta — `verify-gate.sh` + `post-tool-format.sh` + `config.env` + `feature-evaluator.md` + `features/_TEMPLATE.md` + `DECISIONS.md`; **MERGE** `settings.json` (add verify-gate on Stop + PostToolUse format, preserve custom keys) — then bump `aos-version` to `2.1.0` |
+| `.claude/aos-version` = `2.2.0` (current) | `/aos` fill-gaps | Show fill-gaps preview, then Phase 1 only for what's missing |
+| `.claude/aos-version` = `2.0.0` / `2.1.0` (older) | `/aos` fill-gaps → v2.2 | Add the missing delta — **v2.1:** `verify-gate.sh` + `post-tool-format.sh` + `config.env` + `feature-evaluator.md` + `features/_TEMPLATE.md` + `DECISIONS.md`; **v2.2:** `cold-start.sh` + `clean-state.sh` + `Makefile` + `COLD-START.md`. **MERGE** `settings.json` (Stop += verify-gate + clean-state; SessionStart += cold-start; PostToolUse post-tool-format — preserve custom keys). Bump `aos-version` to `2.2.0` |
 | `.claude/aos-version` absent, `.claude/memory/system-knowledge.md` present | v1 detected | Suggest `/aos --upgrade`; if user insists on fresh, ask whether to backup existing first |
 | `.claude/` present but no aos markers (not a v1 workspace either) | Manual choice | Ask: A) full fresh, overwrite OR B) fill-gaps, keep existing |
 
@@ -172,7 +172,7 @@ Generate files in order Layer 1 → Layer 5. Use Curator's **interview-mode** fo
 
 Create in this order:
 
-1. **`.claude/aos-version`** (STATIC) — single line `2.1.0`.
+1. **`.claude/aos-version`** (STATIC) — single line `2.2.0`.
 
 2. **`.claude/active-context.md`** (DYNAMIC) — the **Tracker**, not a Memory Entry ([ADR-0002](docs/adr/0002-entry-schema-and-tracker-separation.md)):
 
@@ -215,6 +215,8 @@ Create in this order:
 
 7. **`.claude/DECISIONS.md`** — copy `templates/DECISIONS.md`. Log hard-to-reverse decisions + the *why* (continuity artifact, harness-eng L5); ADR-grade ones go to `docs/adr/`.
 
+8. **`COLD-START.md`** (workspace root) — copy `templates/COLD-START.md`. The 5-question fresh-session orientation test; the `cold-start.sh` SessionStart hook warns if core files are missing.
+
 ### Layer 3 — Rules
 
 Three files in `.claude/rules/`:
@@ -243,8 +245,8 @@ Per [ADR-0005](docs/adr/0005-hook-architecture.md) wire **Stop + SessionStart** 
 - Memory hook (variant by team type):
   - **Tech** (git present): `memory-stop.sh` → `.claude/hooks/memory-stop.sh`
   - **Non-Tech** (no git / Non-Tech team): `memory-stop-nontech.sh` → `.claude/hooks/memory-stop.sh`
-- Always: `janitor-surface.sh`, `janitor-delta.sh` → `.claude/hooks/`
-- **Tech only**: `verify-gate.sh` + `post-tool-format.sh` + `config.env` → `.claude/hooks/`
+- Always: `janitor-surface.sh`, `janitor-delta.sh`, `cold-start.sh` → `.claude/hooks/`
+- **Tech only**: `verify-gate.sh` + `post-tool-format.sh` + `clean-state.sh` + `config.env` → `.claude/hooks/`; `Makefile` → repo root (`make check` runs the gates on demand)
 
 Make hooks executable: `chmod +x .claude/hooks/*.sh`.
 
@@ -259,7 +261,7 @@ Make hooks executable: `chmod +x .claude/hooks/*.sh`.
 
 Set `VERIFY_GATE_MODE=block` for Tech repos, `off` for Non-Tech. Fill `PROTECTED_PATHS` / `RBAC_MARKERS` from [4] if the team named protected areas (e.g. auth routes), and `RED_LINE_PATTERNS` from [4] for paths that must never reach main (e.g. `mock/`).
 
-For a **fresh** workspace, copy `templates/settings.json` → `.claude/settings.json` (registers Stop → memory-stop + verify-gate, **PostToolUse → post-tool-format** (auto-format the edited file via `FORMAT_CMD`), SessionStart → janitor-surface). For **fill-gaps / existing** workspaces, **MERGE** these registrations into the current `settings.json` — never overwrite the user's custom `env` / `permissions` / hooks.
+For a **fresh** workspace, copy `templates/settings.json` → `.claude/settings.json` (registers Stop → memory-stop + verify-gate + **clean-state**, **PostToolUse → post-tool-format** (auto-format the edited file via `FORMAT_CMD`), SessionStart → janitor-surface + **cold-start**). For **fill-gaps / existing** workspaces, **MERGE** these registrations into the current `settings.json` — never overwrite the user's custom `env` / `permissions` / hooks.
 
 ### Layer 5 — Agents + Skills
 
@@ -414,6 +416,8 @@ For `--upgrade` mode, the closing message also lists the backup path and the rol
 | [0007](docs/adr/0007-migration-v1-to-v2.md) | Migration v1 → v2 | `/aos --upgrade` follows the playbook; `/aos --rollback` provided |
 | [0008](docs/adr/0008-verify-gate.md) | Verify gate (configurable) | Stop runs a language-agnostic 3-layer code gate; block/warn/off via `config.env` |
 | [0009](docs/adr/0009-feature-list-primitive.md) | Feature-list primitive | Work-units in `.claude/features/`; harness flips `passing` via feature-evaluator |
+| [0010](docs/adr/0010-model-routing.md) | Model routing | Per-skill model tiers; eval-gated cascade deferred (needs eval harness) |
+| [0011](docs/adr/0011-observability.md) | Observability | Audit-log JSONL default; OTel emit gated; full tracing needs a collector |
 
 ---
 
