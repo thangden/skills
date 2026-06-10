@@ -74,7 +74,7 @@ After Phase 0A, inspect `.claude/` and `aos-version`:
 | --- | --- | --- |
 | `.claude/` absent | `/aos` fresh | Skip to Phase 1 |
 | `.claude/aos-version` = `2.1.0` (current) | `/aos` fill-gaps | Show fill-gaps preview, then Phase 1 only for what's missing |
-| `.claude/aos-version` = `2.0.0` (older v2.0) | `/aos` fill-gaps → v2.1 | Add the v2.1 delta — `verify-gate.sh` + `config.env` + `feature-evaluator.md` + `features/`, register verify-gate on Stop — then bump `aos-version` to `2.1.0` |
+| `.claude/aos-version` = `2.0.0` (older v2.0) | `/aos` fill-gaps → v2.1 | Add the v2.1 delta — `verify-gate.sh` + `post-tool-format.sh` + `config.env` + `feature-evaluator.md` + `features/_TEMPLATE.md` + `DECISIONS.md`; **MERGE** `settings.json` (add verify-gate on Stop + PostToolUse format, preserve custom keys) — then bump `aos-version` to `2.1.0` |
 | `.claude/aos-version` absent, `.claude/memory/system-knowledge.md` present | v1 detected | Suggest `/aos --upgrade`; if user insists on fresh, ask whether to backup existing first |
 | `.claude/` present but no aos markers (not a v1 workspace either) | Manual choice | Ask: A) full fresh, overwrite OR B) fill-gaps, keep existing |
 
@@ -259,7 +259,7 @@ Make hooks executable: `chmod +x .claude/hooks/*.sh`.
 
 Set `VERIFY_GATE_MODE=block` for Tech repos, `off` for Non-Tech. Fill `PROTECTED_PATHS` / `RBAC_MARKERS` from [4] if the team named protected areas (e.g. auth routes), and `RED_LINE_PATTERNS` from [4] for paths that must never reach main (e.g. `mock/`).
 
-Copy `templates/settings.json` → `.claude/settings.json` (registers Stop → memory-stop + verify-gate, **PostToolUse → post-tool-format** (auto-format the edited file via `FORMAT_CMD`), SessionStart → janitor-surface).
+For a **fresh** workspace, copy `templates/settings.json` → `.claude/settings.json` (registers Stop → memory-stop + verify-gate, **PostToolUse → post-tool-format** (auto-format the edited file via `FORMAT_CMD`), SessionStart → janitor-surface). For **fill-gaps / existing** workspaces, **MERGE** these registrations into the current `settings.json` — never overwrite the user's custom `env` / `permissions` / hooks.
 
 ### Layer 5 — Agents + Skills
 
