@@ -32,10 +32,16 @@ New files:
   .claude/memory/MEMORY.md (index)
   .claude/skills/curator.md  (from templates/)
   .claude/skills/janitor.md
+  .claude/skills/feature-evaluator.md
   .claude/hooks/memory-stop.sh
   .claude/hooks/janitor-surface.sh
   .claude/hooks/janitor-delta.sh
-  .claude/settings.json (replaced)
+  .claude/hooks/verify-gate.sh
+  .claude/hooks/post-tool-format.sh
+  .claude/hooks/config.env
+  .claude/features/_TEMPLATE.md
+  .claude/DECISIONS.md
+  .claude/settings.json (merged — preserves custom keys)
   .claude/aos-version = 2.1.0
 
 CLAUDE.md updates:
@@ -110,6 +116,7 @@ Enumerate all Entries in `.claude/memory/*.md` (excluding `MEMORY.md`, `_archive
 
 Copy `templates/skills/curator.md` → `.claude/skills/curator.md`.
 Copy `templates/skills/janitor.md` → `.claude/skills/janitor.md`.
+Copy `templates/skills/feature-evaluator.md` → `.claude/skills/feature-evaluator.md` (v2.1).
 
 If `.claude/skills/memory-curator.md` or `.claude/skills/memory-janitor.md` exist (v1 names), move to `.claude/skills/_v1-deprecated/` (create folder if absent). Do not delete — the user may have customized.
 
@@ -120,13 +127,19 @@ Detect Tech vs Non-Tech variant from CLAUDE.md or by checking presence of git re
 - Tech (git repo present): copy `templates/hooks/memory-stop.sh` → `.claude/hooks/memory-stop.sh`.
 - Non-Tech (no git repo OR CLAUDE.md indicates Non-Tech team): copy `templates/hooks/memory-stop-nontech.sh` → `.claude/hooks/memory-stop.sh`.
 
-Copy `templates/hooks/janitor-surface.sh` and `janitor-delta.sh` to `.claude/hooks/` regardless of variant. Make all `.sh` files executable.
+Copy `templates/hooks/janitor-surface.sh` and `janitor-delta.sh` to `.claude/hooks/` regardless of variant.
+
+**v2.1 hooks** — also copy `templates/hooks/verify-gate.sh`, `templates/hooks/post-tool-format.sh`, and `templates/hooks/config.env` → `.claude/hooks/`. Then make all `.sh` files executable (`chmod +x .claude/hooks/*.sh`).
 
 Move v1's `.claude/hooks/quality-gate.sh` (if present) to `.claude/hooks/_v1-deprecated/`.
 
-### Step 8 — Replace `settings.json`
+### Step 7b — Install v2.1 feature-list + DECISIONS
 
-Copy `templates/settings.json` → `.claude/settings.json`. If the existing `settings.json` has user customizations beyond hook registration, merge rather than replace — preserve `env`, `permissions`, etc.
+Copy `templates/features/feature-template.md` → `.claude/features/_TEMPLATE.md` (create `.claude/features/`). Copy `templates/DECISIONS.md` → `.claude/DECISIONS.md` (skip if one already exists). Do NOT pre-create individual feature files.
+
+### Step 8 — Merge `settings.json`
+
+**Merge, do NOT overwrite.** Preserve the user's existing `settings.json` (custom `env`, `permissions`, MCP servers, and any extra hooks) and ADD the v2.1 registrations: on `Stop` add `verify-gate.sh` alongside `memory-stop.sh`; add a `PostToolUse` block (matcher `Edit|Write|MultiEdit`) running `post-tool-format.sh`; keep `SessionStart → janitor-surface.sh`. Only copy `templates/settings.json` wholesale when no `settings.json` exists yet.
 
 ### Step 9 — Update `CLAUDE.md`
 
@@ -160,6 +173,7 @@ Append (deduplicated):
 .claude/memory/_archive/
 .claude/janitor-report-*.md
 .claude/_v1-backup-*/
+.claude/hooks-audit-*.log
 ```
 
 ### Step 12 — Log to today's episodic Entry
