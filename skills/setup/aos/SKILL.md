@@ -73,7 +73,8 @@ After Phase 0A, inspect `.claude/` and `aos-version`:
 | State detected | Default mode | Action |
 | --- | --- | --- |
 | `.claude/` absent | `/aos` fresh | Skip to Phase 1 |
-| `.claude/aos-version` present, value = `2.0.0` | `/aos` fill-gaps | Show fill-gaps preview, then Phase 1 only for what's missing |
+| `.claude/aos-version` = `2.1.0` (current) | `/aos` fill-gaps | Show fill-gaps preview, then Phase 1 only for what's missing |
+| `.claude/aos-version` = `2.0.0` (older v2.0) | `/aos` fill-gaps → v2.1 | Add the v2.1 delta — `verify-gate.sh` + `config.env` + `feature-evaluator.md` + `features/`, register verify-gate on Stop — then bump `aos-version` to `2.1.0` |
 | `.claude/aos-version` absent, `.claude/memory/system-knowledge.md` present | v1 detected | Suggest `/aos --upgrade`; if user insists on fresh, ask whether to backup existing first |
 | `.claude/` present but no aos markers (not a v1 workspace either) | Manual choice | Ask: A) full fresh, overwrite OR B) fill-gaps, keep existing |
 
@@ -171,7 +172,7 @@ Generate files in order Layer 1 → Layer 5. Use Curator's **interview-mode** fo
 
 Create in this order:
 
-1. **`.claude/aos-version`** (STATIC) — single line `2.0.0`.
+1. **`.claude/aos-version`** (STATIC) — single line `2.1.0`.
 
 2. **`.claude/active-context.md`** (DYNAMIC) — the **Tracker**, not a Memory Entry ([ADR-0002](docs/adr/0002-entry-schema-and-tracker-separation.md)):
 
@@ -315,11 +316,11 @@ Key steps (full detail in playbook):
 5. Move `active-context.md` to `.claude/active-context.md` (Tracker location)
 6. Reformat `episodic/*.md` with frontmatter and flatten subfolder
 7. Generate `MEMORY.md` index
-8. Copy Curator + Janitor skills from templates
-9. Replace hook scripts (variant detection)
+8. Copy Curator + Janitor + feature-evaluator skills from templates
+9. Replace hook scripts (variant detection) + add `verify-gate.sh` + `config.env`; copy `features/_TEMPLATE.md`
 10. Replace `settings.json`
 11. Update `CLAUDE.md` (additive sections only)
-12. Write `.claude/aos-version` = `2.0.0`
+12. Write `.claude/aos-version` = `2.1.0` (templates now include the v2.1 delta: verify-gate + config.env + feature-evaluator + features/)
 13. Log to today's episodic Entry
 
 ---

@@ -36,7 +36,7 @@ New files:
   .claude/hooks/janitor-surface.sh
   .claude/hooks/janitor-delta.sh
   .claude/settings.json (replaced)
-  .claude/aos-version = 2.0.0
+  .claude/aos-version = 2.1.0
 
 CLAUDE.md updates:
   - Add Memory Layer section referencing the two Scopes
@@ -147,7 +147,7 @@ The marker block (`<!-- aos-v2:start --> ... <!-- aos-v2:end -->`) is the contra
 ### Step 10 — Write `aos-version`
 
 ```bash
-echo "2.0.0" > .claude/aos-version
+echo "2.1.0" > .claude/aos-version
 ```
 
 ### Step 11 — Update `.gitignore`
