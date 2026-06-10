@@ -38,11 +38,15 @@ New files:
   .claude/hooks/janitor-delta.sh
   .claude/hooks/verify-gate.sh
   .claude/hooks/post-tool-format.sh
+  .claude/hooks/cold-start.sh
+  .claude/hooks/clean-state.sh
   .claude/hooks/config.env
   .claude/features/_TEMPLATE.md
   .claude/DECISIONS.md
+  Makefile (repo root)
+  COLD-START.md (workspace root)
   .claude/settings.json (merged — preserves custom keys)
-  .claude/aos-version = 2.1.0
+  .claude/aos-version = 2.2.0
 
 CLAUDE.md updates:
   - Add Memory Layer section referencing the two Scopes
@@ -129,17 +133,17 @@ Detect Tech vs Non-Tech variant from CLAUDE.md or by checking presence of git re
 
 Copy `templates/hooks/janitor-surface.sh` and `janitor-delta.sh` to `.claude/hooks/` regardless of variant.
 
-**v2.1 hooks** — also copy `templates/hooks/verify-gate.sh`, `templates/hooks/post-tool-format.sh`, and `templates/hooks/config.env` → `.claude/hooks/`. Then make all `.sh` files executable (`chmod +x .claude/hooks/*.sh`).
+**v2.1+ hooks** — also copy `templates/hooks/verify-gate.sh`, `templates/hooks/post-tool-format.sh`, `templates/hooks/cold-start.sh`, `templates/hooks/clean-state.sh`, and `templates/hooks/config.env` → `.claude/hooks/`. Then make all `.sh` files executable (`chmod +x .claude/hooks/*.sh`).
 
 Move v1's `.claude/hooks/quality-gate.sh` (if present) to `.claude/hooks/_v1-deprecated/`.
 
 ### Step 7b — Install v2.1 feature-list + DECISIONS
 
-Copy `templates/features/feature-template.md` → `.claude/features/_TEMPLATE.md` (create `.claude/features/`). Copy `templates/DECISIONS.md` → `.claude/DECISIONS.md` (skip if one already exists). Do NOT pre-create individual feature files.
+Copy `templates/features/feature-template.md` → `.claude/features/_TEMPLATE.md` (create `.claude/features/`). Copy `templates/DECISIONS.md` → `.claude/DECISIONS.md` (skip if one already exists). Copy `templates/Makefile` → repo-root `Makefile` (merge an `# aos` section if a Makefile already exists). Copy `templates/COLD-START.md` → workspace-root `COLD-START.md`. Do NOT pre-create individual feature files.
 
 ### Step 8 — Merge `settings.json`
 
-**Merge, do NOT overwrite.** Preserve the user's existing `settings.json` (custom `env`, `permissions`, MCP servers, and any extra hooks) and ADD the v2.1 registrations: on `Stop` add `verify-gate.sh` alongside `memory-stop.sh`; add a `PostToolUse` block (matcher `Edit|Write|MultiEdit`) running `post-tool-format.sh`; keep `SessionStart → janitor-surface.sh`. Only copy `templates/settings.json` wholesale when no `settings.json` exists yet.
+**Merge, do NOT overwrite.** Preserve the user's existing `settings.json` (custom `env`, `permissions`, MCP servers, and any extra hooks) and ADD the registrations: on `Stop` add `verify-gate.sh` + `clean-state.sh` alongside `memory-stop.sh`; add a `PostToolUse` block (matcher `Edit|Write|MultiEdit`) running `post-tool-format.sh`; on `SessionStart` add `cold-start.sh` alongside `janitor-surface.sh`. Only copy `templates/settings.json` wholesale when no `settings.json` exists yet.
 
 ### Step 9 — Update `CLAUDE.md`
 
@@ -160,7 +164,7 @@ The marker block (`<!-- aos-v2:start --> ... <!-- aos-v2:end -->`) is the contra
 ### Step 10 — Write `aos-version`
 
 ```bash
-echo "2.1.0" > .claude/aos-version
+echo "2.2.0" > .claude/aos-version
 ```
 
 ### Step 11 — Update `.gitignore`
